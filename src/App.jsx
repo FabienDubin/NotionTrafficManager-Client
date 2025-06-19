@@ -25,6 +25,7 @@ import SettingsDashboard from "./pages/Dashboard/SettingsDashboard";
 import RootLayout from "./components/ToastLayout";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import CalendarPage from "./pages/CalendarPage";
 
 function App() {
   //LOCATION
@@ -61,14 +62,14 @@ function App() {
               }
             />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-            <Route
+            {/* <Route
               path="/signup"
               element={
                 <IsAnonymous>
                   <Signup />
                 </IsAnonymous>
               }
-            />
+            /> */}
             <Route
               path="/dashboard/*"
               element={
@@ -94,6 +95,14 @@ function App() {
               element={
                 <IsPrivate>
                   <Profile />
+                </IsPrivate>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <IsPrivate>
+                  <CalendarPage />
                 </IsPrivate>
               }
             />
