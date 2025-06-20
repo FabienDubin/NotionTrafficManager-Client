@@ -44,7 +44,7 @@ const Login = () => {
       //Set the authenticated user
       await authenticateUser();
       //Redirect to the home page
-      nav("/");
+      nav("/calendar");
     } catch (error) {
       console.log(error);
       setErrorMessage(error.response.data.message);
@@ -109,12 +109,12 @@ const Login = () => {
                 />
               </div>
 
-              <p className="text-sm">
+              {/* <p className="text-sm">
                 Don't have an account yet? Go to the{" "}
                 <a href="/signup" className=" hover:text-gray-700 underline">
                   signup page!
                 </a>
-              </p>
+              </p> */}
               <Button className="mt-4 w-full">
                 <LogIn />
                 Login
