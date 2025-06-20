@@ -25,7 +25,7 @@ import SettingsDashboard from "./pages/Dashboard/SettingsDashboard";
 import RootLayout from "./components/ToastLayout";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import CalendarPage from "./pages/CalendarPage";
+import Calendar from "./pages/Calendar";
 
 function App() {
   //LOCATION
@@ -91,6 +91,14 @@ function App() {
               }
             />
             <Route
+              path="/calendar"
+              element={
+                <IsPrivate>
+                  <Calendar />
+                </IsPrivate>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <IsPrivate>
@@ -98,14 +106,7 @@ function App() {
                 </IsPrivate>
               }
             />
-            <Route
-              path="/calendar"
-              element={
-                <IsPrivate>
-                  <CalendarPage />
-                </IsPrivate>
-              }
-            />
+
             <Route path="/not-authorized" element={<NotAuthorized />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

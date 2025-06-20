@@ -3,137 +3,191 @@ import axios from "axios";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005";
 
 class CalendarService {
-  // Récupère les tâches non assignées
-  async getUnassignedTasks() {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/calendar/tasks/unassigned`
-      );
-      return response.data;
-    } catch (error) {
-      console.error(
-        "Erreur lors de la récupération des tâches non assignées:",
-        error
-      );
-      throw error;
-    }
+  constructor() {
+    this.api = axios.create({
+      baseURL: `${API_URL}/calendar`,
+      withCredentials: true,
+    });
+
+    // Automatically set JWT token on the request headers for every request
+    this.api.interceptors.request.use((config) => {
+      // Retrieve the JWT token from the local storage
+      const storedToken = localStorage.getItem("authToken");
+
+      if (storedToken) {
+        config.headers = { Authorization: `Bearer ${storedToken}` };
+      }
+
+      return config;
+    });
   }
 
-  // Récupère les tâches dans une période avec préchargement optionnel
-  async getTasksInPeriod(
-    startDate,
-    endDate,
-    preload = false,
-    viewType = "month"
-  ) {
+  // Récupérer les tâches pour une période
+  async getTasks(startDate, endDate) {
     try {
-      const params = {
-        start: startDate,
-        end: endDate,
-        preload: preload.toString(),
-        viewType,
-      };
-
-      const response = await axios.get(`${API_URL}/api/calendar/tasks/period`, {
-        params,
+      const response = await this.api.get("/tasks", {
+        params: {
+          start: startDate,
+          end: endDate,
+        },
       });
       return response.data;
     } catch (error) {
-      console.error(
-        "Erreur lors de la récupération des tâches par période:",
-        error
-      );
-      throw error;
+      console.error("Error fetching tasks:", error);
+      throw this.handleError(error);
     }
   }
 
-  // Met à jour une tâche
+  // Récupérer les tâches non assignées
+  async getUnassignedTasks() {
+    try {
+      const response = await this.api.get("/unassigned-tasks");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching unassigned tasks:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Créer une nouvelle tâche
+  async createTask(taskData) {
+    try {
+      const response = await this.api.post("/tasks", taskData);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating task:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Mettre à jour une tâche
   async updateTask(taskId, updates) {
     try {
-      const response = await axios.patch(
-        `${API_URL}/api/calendar/tasks/${taskId}`,
-        updates
-      );
+      const response = await this.api.patch(`/tasks/${taskId}`, updates);
       return response.data;
     } catch (error) {
-      console.error("Erreur lors de la mise à jour de la tâche:", error);
-      throw error;
+      console.error("Error updating task:", error);
+      throw this.handleError(error);
     }
   }
 
-  // Récupère la liste des utilisateurs
+  // Récupérer les utilisateurs/créatifs
   async getUsers() {
     try {
-      const response = await axios.get(`${API_URL}/api/calendar/users`);
+      const response = await this.api.get("/users");
       return response.data;
     } catch (error) {
-      console.error("Erreur lors de la récupération des utilisateurs:", error);
-      throw error;
+      console.error("Error fetching users:", error);
+      throw this.handleError(error);
     }
   }
 
-  // Récupère la liste des clients
+  // Récupérer les clients
   async getClients() {
     try {
-      const response = await axios.get(`${API_URL}/api/calendar/clients`);
+      const response = await this.api.get("/clients");
       return response.data;
     } catch (error) {
-      console.error("Erreur lors de la récupération des clients:", error);
-      throw error;
+      console.error("Error fetching clients:", error);
+      throw this.handleError(error);
     }
   }
 
-  // Récupère la liste des projets
+  // Récupérer les projets
   async getProjects() {
     try {
-      const response = await axios.get(`${API_URL}/api/calendar/projects`);
+      const response = await this.api.get("/projects");
       return response.data;
     } catch (error) {
-      console.error("Erreur lors de la récupération des projets:", error);
-      throw error;
+      console.error("Error fetching projects:", error);
+      throw this.handleError(error);
     }
   }
 
-  // Transforme une tâche en événement FullCalendar
-  taskToEvent(task, clientColors = {}) {
-    if (!task.period || !task.period.start) {
-      return null;
+  // Récupérer les options de statut
+  async getStatusOptions() {
+    try {
+      const response = await this.api.get("/status-options");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching status options:", error);
+      throw this.handleError(error);
     }
-
-    // Récupère la couleur du client
-    const clientName = Array.isArray(task.client)
-      ? task.client[0]
-      : task.client;
-    const clientColor = clientColors[clientName] || "#3498DB";
-
-    return {
-      id: task.id,
-      title: task.name,
-      start: task.period.start,
-      end: task.period.end,
-      backgroundColor: clientColor,
-      borderColor: clientColor,
-      textColor: "#FFFFFF",
-      extendedProps: {
-        task: task,
-        users: task.users || [],
-        projects: task.projects || [],
-        client: clientName,
-        status: task.status,
-        url: task.url,
-      },
-    };
   }
 
-  // Transforme une liste de tâches en événements FullCalendar
-  tasksToEvents(tasks, clientColors = {}) {
-    return tasks
-      .map((task) => this.taskToEvent(task, clientColors))
-      .filter((event) => event !== null);
+  // Récupérer les préférences utilisateur
+  async getUserPreferences() {
+    try {
+      const response = await this.api.get("/preferences");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching user preferences:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Sauvegarder les préférences utilisateur
+  async saveUserPreferences(preferences) {
+    try {
+      const response = await this.api.patch("/preferences", preferences);
+      return response.data;
+    } catch (error) {
+      console.error("Error saving user preferences:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Récupérer les couleurs des clients
+  async getClientColors() {
+    try {
+      const response = await this.api.get("/client-colors");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching client colors:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Sauvegarder les couleurs des clients
+  async saveClientColors(clientColors) {
+    try {
+      const response = await this.api.patch("/client-colors", clientColors);
+      return response.data;
+    } catch (error) {
+      console.error("Error saving client colors:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Filtrer les tâches
+  async filterTasks(tasks, filters) {
+    try {
+      const response = await this.api.post("/tasks/filter", {
+        tasks,
+        filters,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error filtering tasks:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Gestion des erreurs
+  handleError(error) {
+    if (error.response) {
+      // Erreur de réponse du serveur
+      return new Error(
+        error.response.data?.message || "Erreur lors de la requête"
+      );
+    } else if (error.request) {
+      // Erreur de réseau
+      return new Error("Erreur de connexion au serveur");
+    } else {
+      // Autre erreur
+      return new Error(error.message || "Une erreur inattendue s'est produite");
+    }
   }
 }
 
-// Instance singleton
-const calendarService = new CalendarService();
-
-export default calendarService;
+export default new CalendarService();
