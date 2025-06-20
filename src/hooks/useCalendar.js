@@ -535,48 +535,46 @@ export const useCalendar = () => {
   // Filtrer les tâches
   const filteredTasks = useMemo(() => {
     return state.tasks.filter((task) => {
-      // Filtre par créatifs
+      // Filtre par créatifs (utilise maintenant les IDs)
       if (filters.selectedCreatives.length > 0) {
-        const taskCreatives = Array.isArray(task.assignedUsersNames)
-          ? task.assignedUsersNames
-          : [task.assignedUsersNames].filter(Boolean);
+        const taskUserIds = Array.isArray(task.assignedUsers)
+          ? task.assignedUsers
+          : [task.assignedUsers].filter(Boolean);
 
-        const hasMatchingCreative = taskCreatives.some((creative) => {
-          // Vérifier correspondance exacte
-          if (filters.selectedCreatives.includes(creative)) {
-            return true;
-          }
-
-          // Vérifier si le nom sélectionné est contenu dans le nom de la tâche
-          return filters.selectedCreatives.some((selectedName) => {
-            if (
-              typeof creative === "string" &&
-              typeof selectedName === "string"
-            ) {
-              return (
-                creative.toLowerCase().includes(selectedName.toLowerCase()) ||
-                selectedName.toLowerCase().includes(creative.toLowerCase())
-              );
-            }
-            return false;
-          });
-        });
+        const hasMatchingCreative = taskUserIds.some((userId) =>
+          filters.selectedCreatives.includes(userId)
+        );
 
         if (!hasMatchingCreative) return false;
       }
 
-      // Filtre par clients
+      // Filtre par clients (utilise maintenant les IDs)
       if (filters.selectedClients.length > 0) {
-        const taskClient = Array.isArray(task.client)
+        // Trouver l'ID du client de la tâche
+        const taskClientName = Array.isArray(task.client)
           ? task.client[0]
           : task.client;
 
-        if (!filters.selectedClients.includes(taskClient)) return false;
+        const taskClientId = state.clients.find(
+          (client) => client.name === taskClientName
+        )?.id;
+
+        if (!taskClientId || !filters.selectedClients.includes(taskClientId)) {
+          return false;
+        }
       }
 
-      // Filtre par projets
+      // Filtre par projets (utilise maintenant les IDs)
       if (filters.selectedProjects.length > 0) {
-        if (!filters.selectedProjects.includes(task.projectName)) return false;
+        const taskProjectIds = Array.isArray(task.project)
+          ? task.project
+          : [task.project].filter(Boolean);
+
+        const hasMatchingProject = taskProjectIds.some((projectId) =>
+          filters.selectedProjects.includes(projectId)
+        );
+
+        if (!hasMatchingProject) return false;
       }
 
       // Filtre tâches terminées
@@ -587,7 +585,7 @@ export const useCalendar = () => {
 
       return true;
     });
-  }, [state.tasks, filters]);
+  }, [state.tasks, filters, state.clients]);
 
   // Charger les données initiales
   useEffect(() => {
@@ -621,6 +619,39 @@ export const useCalendar = () => {
     };
   }, [cacheManager]);
 
+  // Fonction pour recharger le calendrier (tâches + données de référence)
+  const reloadCalendar = useCallback(async () => {
+    console.log("🔄 Reloading calendar data...");
+
+    // Vider le cache pour forcer le rechargement
+    cacheManager.clear();
+
+    // Recharger les données de référence
+    await loadReferenceData();
+
+    // Recharger les tâches non assignées
+    await loadUnassignedTasks();
+
+    // Recharger les tâches pour la période courante
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Lundi
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Dimanche
+
+    const startDate = startOfWeek.toISOString().split("T")[0];
+    const endDate = endOfWeek.toISOString().split("T")[0];
+
+    await loadTasksForPeriod(startDate, endDate);
+
+    console.log("✅ Calendar data reloaded");
+  }, [
+    cacheManager,
+    loadReferenceData,
+    loadUnassignedTasks,
+    loadTasksForPeriod,
+  ]);
+
   return {
     // État
     tasks: filteredTasks,
@@ -647,6 +678,7 @@ export const useCalendar = () => {
     savePreferences,
     saveClientColors,
     loadUnassignedTasks,
+    reloadCalendar,
 
     // Utilitaires
     clearCache: cacheManager.clear,

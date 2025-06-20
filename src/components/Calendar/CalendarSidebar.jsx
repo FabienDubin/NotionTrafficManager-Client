@@ -1,18 +1,13 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Filter, GripVertical } from "lucide-react";
+import { Settings, Filter, GripVertical, Search } from "lucide-react";
+import BasicMultiSelectCombobox from "@/components/BasicMultiSelectCombobox";
 
 const CalendarSidebar = ({
   unassignedTasks,
@@ -24,30 +19,52 @@ const CalendarSidebar = ({
   onConfigClick,
   loading,
 }) => {
+  // État local pour la recherche dans les tâches non assignées
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtrer les tâches non assignées selon la recherche
+  const filteredUnassignedTasks = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return unassignedTasks;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+
+    return unassignedTasks.filter((task) => {
+      // Recherche dans le nom de la tâche
+      const taskName = task.name?.toLowerCase() || "";
+      if (taskName.includes(query)) return true;
+
+      // Recherche dans le nom du projet
+      const projectName = task.projectName?.toLowerCase() || "";
+      if (projectName.includes(query)) return true;
+
+      // Recherche dans le nom du client
+      const clientName = Array.isArray(task.client)
+        ? task.client[0]?.toLowerCase() || ""
+        : task.client?.toLowerCase() || "";
+      if (clientName.includes(query)) return true;
+
+      return false;
+    });
+  }, [unassignedTasks, searchQuery]);
+
+  // Filtrer les projets selon le statut (même logique que TaskEditSheet)
+  const filteredProjects = useMemo(() => {
+    return (
+      projects?.filter(
+        (project) =>
+          project.status === "En cours" || project.status === "New Biz"
+      ) || []
+    );
+  }, [projects]);
+
   // Gestionnaire pour les changements de filtres
   const handleFilterChange = (filterType, value) => {
     onFiltersChange((prev) => ({
       ...prev,
       [filterType]: value,
     }));
-  };
-
-  // Gestionnaire pour les filtres multi-select
-  const handleMultiSelectChange = (filterType, value, checked) => {
-    onFiltersChange((prev) => {
-      const currentValues = prev[filterType] || [];
-      if (checked) {
-        return {
-          ...prev,
-          [filterType]: [...currentValues, value],
-        };
-      } else {
-        return {
-          ...prev,
-          [filterType]: currentValues.filter((v) => v !== value),
-        };
-      }
-    });
   };
 
   // Composant pour une tâche draggable
@@ -134,86 +151,37 @@ const CalendarSidebar = ({
         {/* Filtres */}
         <div className="space-y-4">
           {/* Filtre Créatifs */}
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Créatifs</Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`creative-${user.id}`}
-                    checked={
-                      filters.selectedCreatives?.includes(user.name) || false
-                    }
-                    onCheckedChange={(checked) =>
-                      handleMultiSelectChange(
-                        "selectedCreatives",
-                        user.name,
-                        checked
-                      )
-                    }
-                  />
-                  <Label
-                    htmlFor={`creative-${user.id}`}
-                    className="text-sm cursor-pointer truncate flex-1"
-                  >
-                    {user.name}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
+          <BasicMultiSelectCombobox
+            options={users}
+            value={filters.selectedCreatives || []}
+            onValueChange={(value) =>
+              handleFilterChange("selectedCreatives", value)
+            }
+            placeholder="Sélectionner des créatifs..."
+            label="Créatifs"
+          />
 
           {/* Filtre Clients */}
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Client</Label>
-            <Select
-              value={filters.selectedClients?.[0] || "all"}
-              onValueChange={(value) =>
-                handleFilterChange(
-                  "selectedClients",
-                  value === "all" ? [] : [value]
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tous les clients" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les clients</SelectItem>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.name}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <BasicMultiSelectCombobox
+            options={clients}
+            value={filters.selectedClients || []}
+            onValueChange={(value) =>
+              handleFilterChange("selectedClients", value)
+            }
+            placeholder="Sélectionner des clients..."
+            label="Clients"
+          />
 
           {/* Filtre Projets */}
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Projet</Label>
-            <Select
-              value={filters.selectedProjects?.[0] || "all"}
-              onValueChange={(value) =>
-                handleFilterChange(
-                  "selectedProjects",
-                  value === "all" ? [] : [value]
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tous les projets" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les projets</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.name}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <BasicMultiSelectCombobox
+            options={filteredProjects}
+            value={filters.selectedProjects || []}
+            onValueChange={(value) =>
+              handleFilterChange("selectedProjects", value)
+            }
+            placeholder="Sélectionner des projets..."
+            label="Projets"
+          />
 
           {/* Afficher les tâches terminées */}
           <div className="flex items-center space-x-2">
@@ -232,26 +200,47 @@ const CalendarSidebar = ({
       </div>
 
       {/* Tâches non assignées */}
-      <div className="flex-1 p-6 overflow-hidden">
-        <h3 className="font-medium mb-3 text-muted-foreground">
-          Tâches non assignées ({unassignedTasks.length})
-        </h3>
+      <div className="flex-1 p-6 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium text-muted-foreground">
+            Tâches non assignées ({filteredUnassignedTasks.length}
+            {searchQuery &&
+              unassignedTasks.length !== filteredUnassignedTasks.length &&
+              ` sur ${unassignedTasks.length}`}
+            )
+          </h3>
+        </div>
+
+        {/* Barre de recherche */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher par nom, projet ou client..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 text-sm"
+          />
+        </div>
 
         <Droppable droppableId="unassigned-tasks">
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`space-y-2 overflow-y-auto h-full ${
+              className={`space-y-2 overflow-y-auto flex-1 ${
                 snapshot.isDraggingOver ? "bg-accent/20 rounded-lg" : ""
               }`}
             >
-              {unassignedTasks.length === 0 ? (
+              {filteredUnassignedTasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <div className="text-sm">Aucune tâche non assignée</div>
+                  <div className="text-sm">
+                    {searchQuery
+                      ? "Aucune tâche trouvée pour cette recherche"
+                      : "Aucune tâche non assignée"}
+                  </div>
                 </div>
               ) : (
-                unassignedTasks.map((task, index) => (
+                filteredUnassignedTasks.map((task, index) => (
                   <TaskCard key={task.id} task={task} index={index} />
                 ))
               )}

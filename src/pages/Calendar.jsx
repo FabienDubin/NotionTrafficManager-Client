@@ -28,6 +28,7 @@ const Calendar = () => {
     updateTask,
     savePreferences,
     saveClientColors,
+    reloadCalendar,
   } = useCalendar();
 
   const [selectedTask, setSelectedTask] = useState(null);
@@ -318,6 +319,7 @@ const Calendar = () => {
           preferences={preferences}
           onSavePreferences={savePreferences}
           onSaveClientColors={saveClientColors}
+          onClose={reloadCalendar}
         />
       </div>
     </DragDropContext>

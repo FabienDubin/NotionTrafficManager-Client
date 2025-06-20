@@ -4,6 +4,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Droppable } from "@hello-pangea/dnd";
+import "@/styles/calendar.css";
 
 const CalendarView = ({
   tasks,
@@ -311,121 +312,6 @@ const CalendarView = ({
       },
     },
   };
-
-  // Styles CSS personnalisés pour les événements
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      .fc-event-content-custom {
-        padding: 2px 4px;
-        font-size: 12px;
-        line-height: 1.2;
-      }
-      
-      .fc-event-title-custom {
-        font-weight: 600;
-        margin-bottom: 1px;
-      }
-      
-      .fc-event-client {
-        font-size: 10px;
-        opacity: 0.9;
-        margin-bottom: 1px;
-      }
-      
-      .fc-event-assignee {
-        font-size: 10px;
-        opacity: 0.8;
-      }
-      
-      .task-status-terminé,
-      .task-status-pas-commencé,
-      .task-status-en-cours,
-      .task-status-completed,
-      .task-status-done,
-      .task-status-fini {
-        /* Styles par statut */
-      }
-      
-      .task-status-terminé,
-      .task-status-completed,
-      .task-status-done,
-      .task-status-fini {
-        opacity: 0.6;
-        text-decoration: line-through;
-      }
-      
-      .task-status-pas-commencé {
-        opacity: 0.7;
-        border-style: dashed;
-      }
-      
-      .task-status-en-cours {
-        border-width: 2px;
-        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
-      }
-      
-      .fc-event {
-        cursor: pointer;
-        border-radius: 4px;
-        border-width: 1px;
-        transition: all 0.2s ease;
-      }
-      
-      .fc-event:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-      
-      .fc-daygrid-event {
-        margin: 1px 0;
-      }
-      
-      .fc-timegrid-event {
-        border-radius: 3px;
-      }
-      
-      .fc-toolbar {
-        margin-bottom: 1rem;
-      }
-      
-      .fc-toolbar-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-      }
-      
-      .fc-button {
-        background-color: hsl(var(--primary));
-        border-color: hsl(var(--primary));
-        color: hsl(var(--primary-foreground));
-      }
-      
-      .fc-button:hover {
-        background-color: hsl(var(--primary) / 0.9);
-        border-color: hsl(var(--primary) / 0.9);
-      }
-      
-      .fc-button-active {
-        background-color: hsl(var(--primary) / 0.8);
-        border-color: hsl(var(--primary) / 0.8);
-      }
-      
-      .fc-today {
-        background-color: hsl(var(--accent) / 0.1) !important;
-      }
-      
-      .fc-day-header {
-        background-color: hsl(var(--muted));
-        font-weight: 600;
-        padding: 8px 0;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
 
   return (
     <Droppable droppableId="calendar-main">
