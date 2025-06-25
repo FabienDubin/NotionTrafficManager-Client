@@ -1,55 +1,90 @@
 import React, { useState, useMemo } from "react";
-import { Droppable, Draggable } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Filter, GripVertical, Search } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Settings, Filter, Search, Bug, ChevronDown } from "lucide-react";
 import BasicMultiSelectCombobox from "@/components/BasicMultiSelectCombobox";
+import TaskCard from "./TaskCard";
+import TaskEditSheet from "./TaskEditSheet";
+import BugReportModal from "@/components/BugReportModal";
 
 const CalendarSidebar = ({
   unassignedTasks,
   users,
   clients,
   projects,
+  statusOptions,
   filters,
   onFiltersChange,
   onConfigClick,
+  onTaskUpdate,
+  onUnassignedTasksChange,
   loading,
 }) => {
-  // État local pour la recherche dans les tâches non assignées
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingTask, setEditingTask] = useState(null);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
 
-  // Filtrer les tâches non assignées selon la recherche
-  const filteredUnassignedTasks = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return unassignedTasks;
+  const isTaskUnassigned = (task) => {
+    const hasNoWorkPeriod =
+      !task.workPeriod || !task.workPeriod.start || !task.workPeriod.end;
+    return hasNoWorkPeriod;
+  };
+
+  const handleTaskClick = (task) => {
+    setEditingTask(task);
+    setIsEditSheetOpen(true);
+  };
+
+  const handleTaskSave = async (taskId, updates) => {
+    try {
+      await onTaskUpdate(taskId, updates);
+      const updatedTask = { ...editingTask, ...updates };
+      if (!isTaskUnassigned(updatedTask)) {
+        removeTaskWithAnimation(taskId);
+      }
+      setIsEditSheetOpen(false);
+    } catch (error) {
+      console.error("Error saving task:", error);
     }
+  };
 
+  const removeTaskWithAnimation = (taskId) => {
+    const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+    if (taskElement) {
+      taskElement.classList.add("task-card-exit");
+      setTimeout(() => {
+        onUnassignedTasksChange((prev) =>
+          prev.filter((task) => task.id !== taskId)
+        );
+      }, 300);
+    }
+  };
+
+  const filteredUnassignedTasks = useMemo(() => {
+    if (!searchQuery.trim()) return unassignedTasks;
     const query = searchQuery.toLowerCase().trim();
-
     return unassignedTasks.filter((task) => {
-      // Recherche dans le nom de la tâche
-      const taskName = task.name?.toLowerCase() || "";
-      if (taskName.includes(query)) return true;
-
-      // Recherche dans le nom du projet
-      const projectName = task.projectName?.toLowerCase() || "";
-      if (projectName.includes(query)) return true;
-
-      // Recherche dans le nom du client
-      const clientName = Array.isArray(task.client)
+      const name = task.name?.toLowerCase() || "";
+      const project = task.projectName?.toLowerCase() || "";
+      const client = Array.isArray(task.client)
         ? task.client[0]?.toLowerCase() || ""
         : task.client?.toLowerCase() || "";
-      if (clientName.includes(query)) return true;
-
-      return false;
+      return (
+        name.includes(query) ||
+        project.includes(query) ||
+        client.includes(query)
+      );
     });
   }, [unassignedTasks, searchQuery]);
 
-  // Filtrer les projets selon le statut (même logique que TaskEditSheet)
   const filteredProjects = useMemo(() => {
     return (
       projects?.filter(
@@ -59,7 +94,6 @@ const CalendarSidebar = ({
     );
   }, [projects]);
 
-  // Gestionnaire pour les changements de filtres
   const handleFilterChange = (filterType, value) => {
     onFiltersChange((prev) => ({
       ...prev,
@@ -67,198 +101,156 @@ const CalendarSidebar = ({
     }));
   };
 
-  // Composant pour une tâche draggable
-  const TaskCard = ({ task, index }) => (
-    <Draggable draggableId={task.id} index={index}>
-      {(provided, snapshot) => (
-        <Card
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          className={`mb-2 cursor-move transition-all duration-200 hover:shadow-md ${
-            snapshot.isDragging ? "rotate-1 scale-105 shadow-lg" : ""
-          }`}
-        >
-          <CardContent className="p-3">
-            <div className="flex items-start space-x-2">
-              <div
-                {...provided.dragHandleProps}
-                className="mt-1 text-muted-foreground hover:text-foreground"
-              >
-                <GripVertical className="h-4 w-4" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: task.clientColor || "#6366f1" }}
-                  />
-                  <span className="font-medium text-sm truncate">
-                    {task.name}
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  {task.client && (
-                    <div className="text-xs text-muted-foreground">
-                      Client:{" "}
-                      {Array.isArray(task.client)
-                        ? task.client[0]
-                        : task.client}
-                    </div>
-                  )}
-
-                  {task.projectName && (
-                    <div className="text-xs text-muted-foreground">
-                      Projet: {task.projectName}
-                    </div>
-                  )}
-
-                  {task.status && (
-                    <Badge variant="outline" className="text-xs">
-                      {task.status}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </Draggable>
-  );
-
   return (
-    <div className="w-80 border-r bg-background flex flex-col h-full">
-      {/* Header */}
-      <div className="p-6 border-b">
+    <div className="w-80 border-r bg-background flex flex-col h-full relative">
+      {/* Filtres - Section compacte */}
+      <div className="p-6 border-b space-y-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center">
             <Filter className="h-5 w-5 mr-2" />
             Filtres
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onConfigClick}
-            className="flex items-center"
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            Config
-          </Button>
         </div>
 
-        {/* Filtres */}
-        <div className="space-y-4">
-          {/* Filtre Créatifs */}
-          <BasicMultiSelectCombobox
-            options={users}
-            value={filters.selectedCreatives || []}
-            onValueChange={(value) =>
-              handleFilterChange("selectedCreatives", value)
-            }
-            placeholder="Sélectionner des créatifs..."
-            label="Créatifs"
-          />
+        {/* Filtre principal - Créatifs (toujours visible) */}
+        <BasicMultiSelectCombobox
+          options={users}
+          value={filters.selectedCreatives || []}
+          onValueChange={(value) =>
+            handleFilterChange("selectedCreatives", value)
+          }
+          placeholder="Sélectionner des créatifs..."
+          label="Créatifs"
+        />
 
-          {/* Filtre Clients */}
-          <BasicMultiSelectCombobox
-            options={clients}
-            value={filters.selectedClients || []}
-            onValueChange={(value) =>
-              handleFilterChange("selectedClients", value)
-            }
-            placeholder="Sélectionner des clients..."
-            label="Clients"
-          />
+        {/* Filtres avancés dans un accordéon */}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="advanced-filters" className="border-none">
+            <AccordionTrigger className="py-2 px-0 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filtres avancés
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2 h-auto min-h-[320px] overflow-visible relative z-30 bg-background">
+              <BasicMultiSelectCombobox
+                options={clients}
+                value={filters.selectedClients || []}
+                onValueChange={(value) =>
+                  handleFilterChange("selectedClients", value)
+                }
+                placeholder="Sélectionner des clients..."
+                label="Clients"
+              />
 
-          {/* Filtre Projets */}
-          <BasicMultiSelectCombobox
-            options={filteredProjects}
-            value={filters.selectedProjects || []}
-            onValueChange={(value) =>
-              handleFilterChange("selectedProjects", value)
-            }
-            placeholder="Sélectionner des projets..."
-            label="Projets"
-          />
+              <BasicMultiSelectCombobox
+                options={filteredProjects}
+                value={filters.selectedProjects || []}
+                onValueChange={(value) =>
+                  handleFilterChange("selectedProjects", value)
+                }
+                placeholder="Sélectionner des projets..."
+                label="Projets"
+              />
 
-          {/* Afficher les tâches terminées */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="show-completed"
-              checked={filters.showCompleted || false}
-              onCheckedChange={(checked) =>
-                handleFilterChange("showCompleted", checked)
-              }
-            />
-            <Label htmlFor="show-completed" className="text-sm cursor-pointer">
-              Afficher les tâches terminées
-            </Label>
-          </div>
-        </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="show-completed"
+                  checked={filters.showCompleted || false}
+                  onCheckedChange={(checked) =>
+                    handleFilterChange("showCompleted", checked)
+                  }
+                />
+                <Label
+                  htmlFor="show-completed"
+                  className="text-sm cursor-pointer"
+                >
+                  Afficher les tâches terminées
+                </Label>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
 
-      {/* Tâches non assignées */}
-      <div className="flex-1 p-6 overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium text-muted-foreground">
+      {/* Recherche + Liste scrollable */}
+      <div className="flex-1 flex flex-col">
+        <div className="p-6 pb-0">
+          <h3 className="font-medium text-muted-foreground mb-3">
             Tâches non assignées ({filteredUnassignedTasks.length}
             {searchQuery &&
               unassignedTasks.length !== filteredUnassignedTasks.length &&
               ` sur ${unassignedTasks.length}`}
             )
           </h3>
-        </div>
 
-        {/* Barre de recherche */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par nom, projet ou client..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 text-sm"
-          />
-        </div>
-
-        <Droppable droppableId="unassigned-tasks">
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className={`space-y-2 overflow-y-auto flex-1 ${
-                snapshot.isDraggingOver ? "bg-accent/20 rounded-lg" : ""
-              }`}
-            >
-              {filteredUnassignedTasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="text-sm">
-                    {searchQuery
-                      ? "Aucune tâche trouvée pour cette recherche"
-                      : "Aucune tâche non assignée"}
-                  </div>
-                </div>
-              ) : (
-                filteredUnassignedTasks.map((task, index) => (
-                  <TaskCard key={task.id} task={task} index={index} />
-                ))
-              )}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </div>
-
-      {/* Footer avec indicateur de chargement */}
-      {loading && (
-        <div className="p-4 border-t bg-muted/50">
-          <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-            <span>Synchronisation...</span>
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par nom, projet ou client..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 text-sm"
+            />
           </div>
         </div>
-      )}
+
+        <div className="overflow-y-auto px-6 py-4 flex-1 space-y-2 z-10 relative">
+          {filteredUnassignedTasks.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              {searchQuery
+                ? "Aucune tâche trouvée pour cette recherche"
+                : "Aucune tâche non assignée"}
+            </div>
+          ) : (
+            filteredUnassignedTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onTaskClick={handleTaskClick}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Footer - Toujours visible en bas */}
+      <div className="p-4 border-t bg-background flex-shrink-0">
+        <div className="flex justify-between items-center mb-20">
+          <BugReportModal
+            trigger={
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 text-sm"
+              >
+                <Bug className="w-4 h-4 text-red-500" />
+                Signaler un bug
+              </Button>
+            }
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onConfigClick}
+            className="flex items-center gap-1"
+          >
+            <Settings className="h-4 w-4" />
+            Config
+          </Button>
+        </div>
+      </div>
+
+      {/* Edition de tâche */}
+      <TaskEditSheet
+        task={editingTask}
+        users={users}
+        projects={projects}
+        statusOptions={statusOptions}
+        open={isEditSheetOpen}
+        onOpenChange={setIsEditSheetOpen}
+        onSave={handleTaskSave}
+        onClose={() => setIsEditSheetOpen(false)}
+      />
     </div>
   );
 };

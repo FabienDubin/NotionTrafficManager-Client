@@ -199,20 +199,218 @@ export const useCalendar = () => {
     [cacheManager, toast]
   );
 
-  // Mettre à jour une tâche
-  const throttledUpdateTask = throttle(
-    async (taskId, updates, calendarUpdateFn) => {
-      console.log("🔄 Starting throttled task update:", { taskId, updates });
+  // Créer une nouvelle tâche avec UX optimisée (affichage immédiat)
+  const createTaskOptimistic = useCallback(
+    async (taskData, calendarUpdateFn, options = {}) => {
+      console.log("🔄 Starting optimistic task creation:", taskData);
+
+      const { showSuccessToast = true, showProgressToast = false } = options;
+
+      // Générer un ID temporaire pour la nouvelle tâche
+      const tempId = `temp-${Date.now()}`;
+      let tempTask = null;
+      let calendarUpdated = false;
+
+      // Toast de progression si demandé
+      if (showProgressToast) {
+        toast({
+          title: "Création en cours...",
+          description: "Synchronisation avec Notion",
+        });
+      }
+
+      try {
+        // Créer la tâche temporaire pour affichage immédiat
+        tempTask = {
+          id: tempId,
+          name: taskData.name,
+          title: taskData.name,
+          start: taskData.startDate,
+          end: taskData.endDate,
+          workPeriod: {
+            start: taskData.startDate,
+            end: taskData.endDate,
+          },
+          status: taskData.status || "Pas commencé",
+          assignedUsers: taskData.assignedUsers || [],
+          assignedUsersNames: taskData.assignedUsers
+            ? taskData.assignedUsers.map((userId) => {
+                const user = state.users.find((u) => u.id === userId);
+                return user ? user.name : userId;
+              })
+            : [],
+          project: taskData.projectId ? [taskData.projectId] : [],
+          projectName: taskData.projectId
+            ? state.projects.find((p) => p.id === taskData.projectId)?.name
+            : "",
+          client: taskData.projectId
+            ? state.projects.find((p) => p.id === taskData.projectId)?.client
+            : "",
+          clientColor: taskData.projectId
+            ? (() => {
+                const project = state.projects.find(
+                  (p) => p.id === taskData.projectId
+                );
+                if (project && project.client) {
+                  const clientName = Array.isArray(project.client)
+                    ? project.client[0]
+                    : project.client;
+                  const resolvedClientName =
+                    state.clients.find((c) => c.id === clientName)?.name ||
+                    clientName;
+                  const clientColor = state.clientColors.find(
+                    (cc) => cc.clientName === resolvedClientName
+                  );
+                  return clientColor?.color || "#6366f1";
+                }
+                return "#6366f1";
+              })()
+            : "#6366f1",
+          notes: taskData.notes || "",
+          commentaire: taskData.notes || "",
+          _saving: true, // Marquer comme en cours de sauvegarde
+          _isTemp: true, // Marquer comme temporaire
+        };
+
+        // Ajouter immédiatement la tâche à l'état local
+        setState((prev) => ({
+          ...prev,
+          tasks: [...prev.tasks, tempTask],
+        }));
+
+        // Mettre à jour FullCalendar si la fonction est disponible
+        if (calendarUpdateFn) {
+          const calendarEvent = {
+            id: tempId,
+            title: tempTask.name,
+            start: tempTask.start,
+            end: tempTask.end,
+            backgroundColor: tempTask.clientColor,
+            borderColor: tempTask.clientColor,
+            textColor: "#ffffff",
+            extendedProps: {
+              originalTask: tempTask,
+            },
+          };
+
+          calendarUpdated = calendarUpdateFn(calendarEvent);
+          console.log("📅 Temporary task added to calendar:", {
+            tempId,
+            success: calendarUpdated,
+          });
+        }
+
+        console.log("✅ Temporary task added to state immediately:", tempId);
+
+        // Appel API en arrière-plan
+        console.log("📡 Calling API to create task in Notion (background)...");
+        const response = await calendarService.createTask(taskData);
+        console.log("✅ API call successful:", response);
+
+        const newTask = response.data;
+
+        // Remplacer la tâche temporaire par la vraie tâche
+        setState((prev) => ({
+          ...prev,
+          tasks: prev.tasks.map((task) => {
+            if (task.id === tempId) {
+              const finalTask = {
+                ...newTask,
+                _saving: false,
+                _isTemp: false,
+              };
+              delete finalTask._saving;
+              delete finalTask._isTemp;
+              return finalTask;
+            }
+            return task;
+          }),
+        }));
+
+        // Mettre à jour FullCalendar avec les vraies données
+        if (calendarUpdateFn && newTask) {
+          calendarUpdateFn({
+            oldId: tempId,
+            newId: newTask.id,
+            title: newTask.name || newTask.title,
+            backgroundColor: newTask.clientColor,
+            borderColor: newTask.clientColor,
+            extendedProps: {
+              originalTask: newTask,
+            },
+          });
+          console.log("📅 Calendar updated with real task data:", newTask.id);
+        }
+
+        // Invalider le cache
+        cacheManager.clear();
+
+        if (showSuccessToast) {
+          toast({
+            title: "Succès",
+            description: "Nouvelle tâche créée avec succès",
+          });
+        }
+
+        console.log("✅ Task creation completed successfully:", newTask.id);
+        return newTask;
+      } catch (error) {
+        console.error("❌ Error creating task:", error);
+
+        // Rollback : supprimer la tâche temporaire
+        if (tempTask) {
+          console.log("🔄 Rolling back temporary task due to error");
+          setState((prev) => ({
+            ...prev,
+            tasks: prev.tasks.filter((task) => task.id !== tempId),
+          }));
+
+          // Rollback calendar si nécessaire
+          if (calendarUpdated && calendarUpdateFn) {
+            calendarUpdateFn({ removeId: tempId });
+          }
+        }
+
+        toast({
+          title: "Erreur de création",
+          description: `Impossible de créer la tâche: ${error.message}`,
+          variant: "destructive",
+        });
+
+        throw error;
+      }
+    },
+    [
+      cacheManager,
+      toast,
+      state.users,
+      state.projects,
+      state.clients,
+      state.clientColors,
+    ]
+  );
+
+  // Mettre à jour une tâche avec UX optimisée (fermeture immédiate)
+  const updateTaskOptimistic = useCallback(
+    async (taskId, updates, calendarUpdateFn, options = {}) => {
+      console.log("🔄 Starting optimistic task update:", { taskId, updates });
+
+      const { showSuccessToast = true, showProgressToast = false } = options;
 
       // Sauvegarder l'état original pour le rollback
       let originalTask = null;
       let calendarUpdated = false;
 
-      try {
-        // Activer l'indicateur de mise à jour
-        setState((prev) => ({ ...prev, updating: true }));
+      // Toast de progression si demandé
+      if (showProgressToast) {
+        toast({
+          title: "Sauvegarde en cours...",
+          description: "Synchronisation avec Notion",
+        });
+      }
 
-        // Mise à jour optimiste simplifiée : le serveur renvoie les données enrichies
+      try {
+        // Mise à jour optimiste immédiate
         setState((prev) => {
           const taskIndex = prev.tasks.findIndex((task) => task.id === taskId);
           if (taskIndex === -1) return prev;
@@ -227,12 +425,16 @@ export const useCalendar = () => {
             mergedTask.title = updates.name;
           }
 
+          // Appliquer TOUJOURS les changements de dates immédiatement (correction problèmes 2 & 3)
           if (updates.startDate || updates.endDate || updates.workPeriod) {
             if (updates.workPeriod) {
+              // Drag & drop / redimensionnement
               mergedTask.start = updates.workPeriod.start;
               mergedTask.end = updates.workPeriod.end;
               mergedTask.workPeriod = updates.workPeriod;
+              console.log("🎯 Applying drag & drop date update immediately");
             } else {
+              // TaskEditSheet - appliquer TOUJOURS immédiatement avec les dates exactes
               if (updates.startDate) {
                 mergedTask.start = updates.startDate;
                 mergedTask.workPeriod = {
@@ -247,6 +449,15 @@ export const useCalendar = () => {
                   end: updates.endDate,
                 };
               }
+              console.log(
+                "📅 Applying TaskEditSheet date update immediately:",
+                {
+                  startDate: updates.startDate,
+                  endDate: updates.endDate,
+                  mergedStart: mergedTask.start,
+                  mergedEnd: mergedTask.end,
+                }
+              );
             }
           }
 
@@ -259,9 +470,28 @@ export const useCalendar = () => {
             mergedTask.commentaire = updates.notes;
           }
 
+          if (updates.projectId !== undefined) {
+            mergedTask.project = [updates.projectId];
+          }
+
+          if (updates.assignedUsers !== undefined) {
+            mergedTask.assignedUsers = updates.assignedUsers;
+
+            // 🔁 Recalculer les noms des utilisateurs assignés
+            mergedTask.assignedUsersNames = updates.assignedUsers.map(
+              (userId) => {
+                const user = prev.users.find((u) => u.id === userId);
+                return user ? user.name : userId;
+              }
+            );
+          }
+
+          // Marquer la tâche comme en cours de sauvegarde
+          mergedTask._saving = true;
+
           updatedTasks[taskIndex] = mergedTask;
 
-          console.log("✅ Task updated locally (simplified):", {
+          console.log("✅ Task updated locally (optimistic):", {
             taskId,
             oldTask: originalTask,
             newTask: mergedTask,
@@ -275,11 +505,14 @@ export const useCalendar = () => {
         });
 
         // Mettre à jour directement l'événement dans FullCalendar si la fonction est disponible
+        // MAIS seulement si nécessaire pour éviter les décalages temporaires
         if (calendarUpdateFn) {
           const calendarUpdates = {};
+          let needsCalendarUpdate = false;
 
           if (updates.name !== undefined) {
             calendarUpdates.title = updates.name;
+            needsCalendarUpdate = true;
           }
 
           if (updates.projectId !== undefined) {
@@ -301,80 +534,135 @@ export const useCalendar = () => {
 
                 if (clientColor) {
                   calendarUpdates.backgroundColor = clientColor.color;
+                  needsCalendarUpdate = true;
                 }
               }
               return prev;
             });
           }
 
-          if (updates.startDate || updates.endDate) {
-            calendarUpdates.start = updates.startDate;
-            calendarUpdates.end = updates.endDate;
-          }
-
+          // Appliquer TOUJOURS les changements de dates à FullCalendar immédiatement
           if (updates.workPeriod) {
+            // Drag & drop / redimensionnement
             calendarUpdates.start = updates.workPeriod.start;
             calendarUpdates.end = updates.workPeriod.end;
+            needsCalendarUpdate = true;
+            console.log("🎯 Updating FullCalendar for drag & drop operation");
+          } else if (updates.startDate || updates.endDate) {
+            // TaskEditSheet - appliquer TOUJOURS immédiatement
+            calendarUpdates.start = updates.startDate || originalTask?.start;
+            calendarUpdates.end = updates.endDate || originalTask?.end;
+            needsCalendarUpdate = true;
+            console.log(
+              "📅 Updating FullCalendar for TaskEditSheet immediately"
+            );
+          }
+
+          // Gérer les changements d'assignation immédiatement
+          if (updates.assignedUsers !== undefined) {
+            needsCalendarUpdate = true;
+            console.log("👥 Updating FullCalendar for assignedUsers change");
           }
 
           // Mettre à jour les propriétés étendues pour l'affichage
-          calendarUpdates.extendedProps = {};
-          setState((prev) => {
-            const task = prev.tasks.find((t) => t.id === taskId);
-            if (task) {
-              calendarUpdates.extendedProps = {
-                ...task,
-                client: task.client,
-                assignedUsersNames: task.assignedUsersNames,
-              };
-            }
-            return prev;
-          });
+          if (needsCalendarUpdate) {
+            calendarUpdates.extendedProps = {};
+            setState((prev) => {
+              const task = prev.tasks.find((t) => t.id === taskId);
+              if (task) {
+                calendarUpdates.extendedProps = {
+                  ...task,
+                  client: task.client,
+                  assignedUsersNames: task.assignedUsersNames,
+                };
+              }
+              return prev;
+            });
 
-          calendarUpdated = calendarUpdateFn(taskId, calendarUpdates);
-          console.log("📅 Calendar event updated directly:", {
-            taskId,
-            calendarUpdates,
-            success: calendarUpdated,
-          });
+            calendarUpdated = calendarUpdateFn(taskId, calendarUpdates);
+            console.log("📅 Calendar event updated directly:", {
+              taskId,
+              calendarUpdates,
+              success: calendarUpdated,
+            });
+          } else {
+            console.log("📅 No calendar update needed - no visual changes");
+          }
         }
 
-        // Appel API en arrière-plan avec logs détaillés
-        console.log("📡 Calling API to sync with Notion...");
+        // Appel API en arrière-plan (non bloquant)
+        console.log("📡 Calling API to sync with Notion (background)...");
         const response = await calendarService.updateTask(taskId, updates);
         console.log("✅ API call successful:", response);
 
         const updatedTask = response.data;
 
-        // Remplacer complètement par les données enrichies du serveur
+        // Finaliser la mise à jour avec les données du serveur
         setState((prev) => ({
           ...prev,
-          tasks: prev.tasks.map((task) =>
-            task.id === taskId ? updatedTask : task
-          ),
+          tasks: prev.tasks.map((task) => {
+            if (task.id === taskId) {
+              const finalTask =
+                updatedTask && updatedTask.id
+                  ? { ...task, ...updatedTask }
+                  : task;
+
+              // Retirer le flag de sauvegarde
+              delete finalTask._saving;
+              return finalTask;
+            }
+            return task;
+          }),
         }));
 
-        // Invalider le cache pour les prochains chargements
-        cacheManager.clear();
+        // Si la tâche était non assignée et maintenant assignée, recharger les tâches non assignées
+        if (updates.workPeriod || updates.startDate || updates.endDate) {
+          console.log("🔄 Task assigned, reloading unassigned tasks");
+          loadUnassignedTasks().catch((error) => {
+            console.warn("⚠️ Failed to reload unassigned tasks:", error);
+          });
+        }
 
-        // Désactiver l'indicateur de mise à jour
-        setState((prev) => ({ ...prev, updating: false }));
+        // Invalidation sélective du cache au lieu de clear() complet
+        const cacheKeysToInvalidate = [];
+        if (updates.startDate || updates.endDate || updates.workPeriod) {
+          // Invalider seulement les caches de tâches qui pourraient être affectés
+          const startDate = updates.startDate || updates.workPeriod?.start;
+          const endDate = updates.endDate || updates.workPeriod?.end;
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            // Invalider la semaine de la nouvelle période
+            const weekStart = new Date(start);
+            weekStart.setDate(start.getDate() - start.getDay() + 1);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
 
-        toast({
-          title: "Succès",
-          description: "Tâche mise à jour avec succès",
+            const cacheKey = `tasks-${weekStart.toISOString().split("T")[0]}-${
+              weekEnd.toISOString().split("T")[0]
+            }`;
+            cacheKeysToInvalidate.push(cacheKey);
+          }
+        }
+
+        // Invalider seulement les clés nécessaires
+        cacheKeysToInvalidate.forEach((key) => {
+          if (cacheManager.cache.has(key)) {
+            cacheManager.cache.delete(key);
+            console.log("🗑️ Invalidated cache key:", key);
+          }
         });
 
-        return updatedTask;
+        if (showSuccessToast) {
+          toast({
+            title: "Succès",
+            description: "Tâche sauvegardée avec succès",
+          });
+        }
+
+        return updatedTask || originalTask;
       } catch (error) {
         console.error("❌ Error updating task:", error);
-        console.error("Error details:", {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-          taskId,
-          updates,
-        });
 
         // Revert optimistic update en cas d'erreur
         if (originalTask) {
@@ -398,22 +686,133 @@ export const useCalendar = () => {
           }
         }
 
-        // Désactiver l'indicateur de mise à jour en cas d'erreur
-        setState((prev) => ({ ...prev, updating: false }));
-
         toast({
-          title: "Erreur",
-          description: `Impossible de mettre à jour la tâche: ${error.message}`,
+          title: "Erreur de sauvegarde",
+          description: `Impossible de sauvegarder: ${error.message}`,
           variant: "destructive",
         });
 
         throw error;
-      } finally {
-        // S'assurer que l'indicateur est désactivé dans tous les cas
-        setState((prev) => ({ ...prev, updating: false }));
       }
     },
-    1000
+    [cacheManager, toast, loadUnassignedTasks]
+  );
+
+  // Version throttled pour la compatibilité (drag & drop, etc.)
+  const throttledUpdateTask = throttle(updateTaskOptimistic, 1000);
+
+  // Supprimer une tâche avec UX optimisée
+  const deleteTask = useCallback(
+    async (taskId, options = {}) => {
+      console.log("🗑️ Starting task deletion:", taskId);
+
+      const { showSuccessToast = true, showProgressToast = false } = options;
+
+      // Sauvegarder l'état original pour le rollback
+      let originalTask = null;
+
+      // Toast de progression si demandé
+      if (showProgressToast) {
+        toast({
+          title: "Suppression en cours...",
+          description: "Synchronisation avec Notion",
+        });
+      }
+
+      try {
+        // Retrait optimiste immédiat de la tâche
+        setState((prev) => {
+          const taskIndex = prev.tasks.findIndex((task) => task.id === taskId);
+          if (taskIndex === -1) {
+            console.warn("⚠️ Task not found for deletion:", taskId);
+            return prev;
+          }
+
+          originalTask = prev.tasks[taskIndex];
+          const updatedTasks = prev.tasks.filter((task) => task.id !== taskId);
+
+          console.log("✅ Task removed from state immediately:", taskId);
+
+          return {
+            ...prev,
+            tasks: updatedTasks,
+          };
+        });
+
+        // Appel API en arrière-plan
+        console.log("📡 Calling API to delete task in Notion (background)...");
+        await calendarService.deleteTask(taskId);
+        console.log("✅ API call successful - task deleted");
+
+        // Recharger les tâches non assignées au cas où la tâche supprimée était assignée
+        loadUnassignedTasks().catch((error) => {
+          console.warn("⚠️ Failed to reload unassigned tasks:", error);
+        });
+
+        // Invalidation sélective du cache
+        if (originalTask && originalTask.workPeriod) {
+          const startDate = originalTask.workPeriod.start || originalTask.start;
+          const endDate = originalTask.workPeriod.end || originalTask.end;
+
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            // Invalider la semaine de la tâche supprimée
+            const weekStart = new Date(start);
+            weekStart.setDate(start.getDate() - start.getDay() + 1);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+            const cacheKey = `tasks-${weekStart.toISOString().split("T")[0]}-${
+              weekEnd.toISOString().split("T")[0]
+            }`;
+
+            if (cacheManager.cache.has(cacheKey)) {
+              cacheManager.cache.delete(cacheKey);
+              console.log(
+                "🗑️ Invalidated cache key for deleted task:",
+                cacheKey
+              );
+            }
+          }
+        }
+
+        if (showSuccessToast) {
+          toast({
+            title: "Succès",
+            description: "Tâche supprimée avec succès",
+          });
+        }
+
+        console.log("✅ Task deletion completed successfully:", taskId);
+        return true;
+      } catch (error) {
+        console.error("❌ Error deleting task:", error);
+
+        // Rollback : remettre la tâche dans l'état
+        if (originalTask) {
+          console.log("🔄 Rolling back task deletion due to error");
+          setState((prev) => ({
+            ...prev,
+            tasks: [...prev.tasks, originalTask].sort((a, b) => {
+              // Trier par date de début pour maintenir l'ordre
+              const dateA = new Date(a.start || a.workPeriod?.start || 0);
+              const dateB = new Date(b.start || b.workPeriod?.start || 0);
+              return dateA - dateB;
+            }),
+          }));
+        }
+
+        toast({
+          title: "Erreur de suppression",
+          description: `Impossible de supprimer la tâche: ${error.message}`,
+          variant: "destructive",
+        });
+
+        throw error;
+      }
+    },
+    [cacheManager, toast, loadUnassignedTasks]
   );
 
   // Charger les données de référence
@@ -652,6 +1051,35 @@ export const useCalendar = () => {
     loadTasksForPeriod,
   ]);
 
+  // Fonction pour ajouter une tâche directement au calendrier
+  const addTaskToCalendar = useCallback((task) => {
+    setState((prev) => ({
+      ...prev,
+      tasks: [...prev.tasks, task],
+    }));
+    console.log("✅ Task added to calendar state:", task.id);
+  }, []);
+
+  // Fonction pour retirer une tâche du calendrier
+  const removeTaskFromCalendar = useCallback((taskId) => {
+    setState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.id !== taskId),
+    }));
+    console.log("✅ Task removed from calendar state:", taskId);
+  }, []);
+
+  // Fonction pour mettre à jour une tâche dans le calendrier
+  const updateTaskInCalendar = useCallback((taskId, updates) => {
+    setState((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === taskId ? { ...t, ...updates } : t
+      ),
+    }));
+    console.log("✅ Task updated in calendar state:", taskId, updates);
+  }, []);
+
   return {
     // État
     tasks: filteredTasks,
@@ -674,11 +1102,19 @@ export const useCalendar = () => {
     // Actions
     loadTasksForPeriod: debouncedLoadTasks,
     createTask,
+    createTaskOptimistic, // Nouvelle fonction pour création optimisée
     updateTask: throttledUpdateTask,
+    updateTaskOptimistic, // Nouvelle fonction pour UX optimisée
+    deleteTask, // Nouvelle fonction pour suppression optimisée
     savePreferences,
     saveClientColors,
     loadUnassignedTasks,
     reloadCalendar,
+
+    // Manipulation directe des tâches
+    addTaskToCalendar,
+    removeTaskFromCalendar,
+    updateTaskInCalendar,
 
     // Utilitaires
     clearCache: cacheManager.clear,

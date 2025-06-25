@@ -16,8 +16,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Building, Save, X } from "lucide-react";
+import { Clock, Building, Save, X, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +45,7 @@ const TaskEditSheet = ({
   onOpenChange,
   onSave,
   onClose,
+  onDelete,
 }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -50,6 +62,7 @@ const TaskEditSheet = ({
   const [loading, setLoading] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingProject, setIsEditingProject] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Filtrer les projets selon le statut
@@ -92,6 +105,16 @@ const TaskEditSheet = ({
       });
     }
   }, [task]);
+
+  // Réinitialiser l'état du dialog quand la sheet se ferme
+  useEffect(() => {
+    if (!open) {
+      setIsDeleteDialogOpen(false);
+      setIsEditingName(false);
+      setIsEditingProject(false);
+      setLoading(false);
+    }
+  }, [open]);
 
   // Calculer la durée initiale en minutes
   const calculateInitialDuration = () => {
@@ -198,7 +221,7 @@ const TaskEditSheet = ({
     return { isValid: true };
   };
 
-  // Gestionnaire pour la sauvegarde
+  // Gestionnaire pour la sauvegarde avec UX optimisée
   const handleSave = async () => {
     if (!task) return;
 
@@ -234,52 +257,76 @@ const TaskEditSheet = ({
       return; // Garder la sheet ouverte pour permettre la correction
     }
 
-    setLoading(true);
+    // Combiner date et heure avec validation et fuseau horaire local
+    const createLocalISOString = (dateStr, timeStr) => {
+      if (!dateStr) return null;
+      const time = timeStr || "09:00";
+
+      // Créer une date locale sans conversion de fuseau horaire
+      const localDate = new Date(`${dateStr}T${time}:00`);
+
+      // Ajuster pour le fuseau horaire local pour éviter les décalages
+      const timezoneOffset = localDate.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(localDate.getTime() - timezoneOffset);
+
+      return localISOTime.toISOString();
+    };
+
+    const startDateTime = createLocalISOString(
+      formData.startDate,
+      formData.startTime
+    );
+    const endDateTime = createLocalISOString(
+      formData.endDate,
+      formData.endTime
+    );
+
+    const updates = {
+      name: formData.name,
+      projectId: formData.projectId,
+      startDate: startDateTime,
+      endDate: endDateTime,
+      status: formData.status,
+      assignedUsers: formData.assignedUsers,
+      notes: formData.notes,
+    };
+
+    // Fermer immédiatement la sheet pour une UX fluide
+    onClose();
+
+    // Toast de progression
+    toast({
+      title: "Sauvegarde en cours...",
+      description: "Synchronisation avec Notion",
+    });
+
     try {
-      // Combiner date et heure avec validation
-      const startDateTime =
-        formData.startDate && formData.startTime
-          ? `${formData.startDate}T${formData.startTime}:00`
-          : formData.startDate;
-      const endDateTime =
-        formData.endDate && formData.endTime
-          ? `${formData.endDate}T${formData.endTime}:00`
-          : formData.endDate;
-
-      await onSave(task.id, {
-        name: formData.name,
-        projectId: formData.projectId,
-        startDate: startDateTime,
-        endDate: endDateTime,
-        status: formData.status,
-        assignedUsers: formData.assignedUsers,
-        notes: formData.notes,
+      // Sauvegarde en arrière-plan avec la nouvelle fonction optimisée
+      await onSave(task.id, updates, {
+        showProgressToast: false, // Déjà affiché ci-dessus
+        showSuccessToast: true,
       });
 
-      // Afficher un toast de succès
-      const isNewTask = task.isNew || task.id === "new";
-      toast({
-        title: isNewTask ? "Tâche créée" : "Tâche sauvegardée",
-        description: isNewTask
-          ? "La nouvelle tâche a été créée avec succès."
-          : "Les modifications ont été enregistrées avec succès.",
-      });
-
-      // Fermer la sheet seulement en cas de succès
-      onClose();
+      // Toast de succès géré par la fonction onSave
     } catch (error) {
       console.error("Error saving task:", error);
+
+      // En cas d'erreur, proposer de réouvrir la sheet
       const isNewTask = task.isNew || task.id === "new";
       toast({
         title: isNewTask ? "Erreur de création" : "Erreur de sauvegarde",
         description: isNewTask
-          ? "Une erreur est survenue lors de la création. Veuillez réessayer."
-          : "Une erreur est survenue lors de la sauvegarde. Veuillez réessayer.",
+          ? "Une erreur est survenue lors de la création. Voulez-vous réessayer ?"
+          : "Une erreur est survenue lors de la sauvegarde. Voulez-vous réessayer ?",
         variant: "destructive",
+        action: {
+          label: "Réessayer",
+          onClick: () => {
+            // Réouvrir la sheet avec les données du formulaire
+            onOpenChange(true);
+          },
+        },
       });
-      // Ne pas fermer la sheet en cas d'erreur pour permettre la correction
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -303,6 +350,57 @@ const TaskEditSheet = ({
     };
 
     return colorMap[status.color] || colorMap.default;
+  };
+
+  // Gestionnaire pour la suppression avec UX optimisée
+  const handleDelete = async () => {
+    if (!task || !onDelete) return;
+
+    // Ne pas permettre la suppression des nouvelles tâches
+    if (task.isNew || task.id === "new") {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer une tâche non sauvegardée.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Fermer immédiatement la sheet pour une UX fluide
+    onClose();
+
+    // Toast de progression
+    toast({
+      title: "Suppression en cours...",
+      description: "Synchronisation avec Notion",
+    });
+
+    try {
+      // Suppression en arrière-plan avec la fonction optimisée
+      await onDelete(task.id, {
+        showProgressToast: false, // Déjà affiché ci-dessus
+        showSuccessToast: true,
+      });
+
+      // Toast de succès géré par la fonction onDelete
+    } catch (error) {
+      console.error("Error deleting task:", error);
+
+      // En cas d'erreur, proposer de réouvrir la sheet
+      toast({
+        title: "Erreur de suppression",
+        description:
+          "Une erreur est survenue lors de la suppression. Voulez-vous réessayer ?",
+        variant: "destructive",
+        action: {
+          label: "Réessayer",
+          onClick: () => {
+            // Réouvrir la sheet avec les données du formulaire
+            onOpenChange(true);
+          },
+        },
+      });
+    }
   };
 
   // Gestionnaire pour fermer la sheet en cliquant dehors
@@ -515,20 +613,83 @@ const TaskEditSheet = ({
           </div>
 
           {/* Boutons d'action */}
-          <div className="flex space-x-2 pt-4 border-t">
-            <Button onClick={handleSave} disabled={loading} className="flex-1">
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Sauvegarder
-            </Button>
+          <div className="space-y-3 pt-4 border-t">
+            {/* Boutons principaux */}
+            <div className="flex space-x-2">
+              <Button
+                onClick={handleSave}
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Sauvegarder
+              </Button>
 
-            <Button variant="outline" onClick={onClose} disabled={loading}>
-              <X className="h-4 w-4 mr-2" />
-              Annuler
-            </Button>
+              <Button variant="outline" onClick={onClose} disabled={loading}>
+                <X className="h-4 w-4 mr-2" />
+                Annuler
+              </Button>
+            </div>
+
+            {/* Bouton de suppression - seulement pour les tâches existantes */}
+            {!task.isNew && task.id !== "new" && onDelete && (
+              <div className="flex justify-center pt-2 border-t border-gray-100">
+                <AlertDialog
+                  open={isDeleteDialogOpen}
+                  onOpenChange={setIsDeleteDialogOpen}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={loading}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Supprimer la tâche
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Confirmer la suppression
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Êtes-vous sûr de vouloir supprimer cette tâche ?
+                        <br />
+                        <strong>"{formData.name || task.name}"</strong>
+                        <br />
+                        <br />
+                        Cette action est définitive et supprimera la tâche du
+                        calendrier et de la base de données Notion.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel
+                        onClick={() => setIsDeleteDialogOpen(false)}
+                      >
+                        Annuler
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          setIsDeleteDialogOpen(false);
+                          handleDelete();
+                        }}
+                        className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer définitivement
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
         </div>
       </SheetContent>

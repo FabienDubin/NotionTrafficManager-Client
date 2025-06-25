@@ -71,6 +71,17 @@ class CalendarService {
     }
   }
 
+  // Supprimer une tâche
+  async deleteTask(taskId) {
+    try {
+      const response = await this.api.delete(`/tasks/${taskId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw this.handleError(error);
+    }
+  }
+
   // Récupérer les utilisateurs/créatifs
   async getUsers() {
     try {

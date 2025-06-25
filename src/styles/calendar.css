@@ -45,6 +45,44 @@
   @apply cursor-pointer rounded-md border border-border text-white transition-all duration-200 ease-in-out hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring;
 }
 
+/* Force l'application des couleurs personnalisées dans toutes les vues */
+.fc-event[style*="background-color"] {
+  background-color: var(--event-bg-color) !important;
+  border-color: var(--event-border-color) !important;
+}
+
+/* Styles spécifiques pour la vue mensuelle */
+.fc-dayGridMonth-view .fc-event {
+  @apply text-white font-medium;
+}
+
+.fc-dayGridMonth-view .fc-daygrid-event {
+  @apply rounded-sm px-1 py-0.5;
+}
+
+/* S'assurer que les couleurs sont appliquées dans la vue mensuelle */
+.fc-dayGridMonth-view .fc-event[style*="background-color"] {
+  background-color: var(--event-bg-color) !important;
+  border-color: var(--event-border-color) !important;
+  color: white !important;
+}
+
+/* Améliorer la lisibilité dans la vue mensuelle */
+.fc-dayGridMonth-view .fc-event-title {
+  @apply text-xs font-semibold;
+  color: white !important;
+}
+
+.fc-dayGridMonth-view .fc-event-content-custom {
+  @apply text-xs;
+}
+
+.fc-dayGridMonth-view .fc-event-client,
+.fc-dayGridMonth-view .fc-event-assignee {
+  @apply text-[10px] opacity-90;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
 .fc-event-content {
   @apply px-1 py-0.5 text-xs leading-tight;
 }
@@ -98,4 +136,454 @@
 /* Ajustement layout */
 .fc-scrollgrid {
   @apply border-border;
+}
+
+/* TaskCard styles */
+.task-card {
+  @apply cursor-pointer;
+}
+
+.task-card .grip-handle {
+  @apply cursor-grab;
+}
+
+.task-card .grip-handle:active {
+  @apply cursor-grabbing;
+}
+
+/* Animation fade out pour les tâches supprimées */
+.task-card-exit {
+  opacity: 1;
+  transform: scale(1);
+  transition: all 0.3s ease-out;
+}
+
+.task-card-exit-active {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Animation pendant le drag */
+.task-card[data-dragging="true"] {
+  @apply rotate-2 scale-95 opacity-50 shadow-xl;
+  transition: all 0.2s ease-out;
+}
+
+/* Zone de drop active */
+.fc[data-drop-active="true"] {
+  @apply bg-blue-50/80 border-4 border-blue-400 border-dashed rounded-lg;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Amélioration de l'aperçu de drag */
+.drag-preview {
+  @apply shadow-2xl border-2 border-blue-500 bg-white rounded-lg;
+  transform: rotate(3deg) scale(1.05);
+  opacity: 0.95;
+}
+
+/* Indicateur de zone de drop valide */
+.drop-zone-valid {
+  @apply bg-green-50/80 border-green-400;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.drop-zone-invalid {
+  @apply bg-red-50/80 border-red-400;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+/* Animation des jours du calendrier pendant le drag */
+.fc[data-drop-active="true"] .fc-day,
+.fc[data-drop-active="true"] .fc-timegrid-slot {
+  @apply transition-all duration-200;
+}
+
+.fc[data-drop-active="true"] .fc-day:hover,
+.fc[data-drop-active="true"] .fc-timegrid-slot:hover {
+  @apply bg-blue-100 border-blue-300;
+  transform: scale(1.02);
+}
+
+/* Indicateur visuel pour les créneaux horaires */
+.fc[data-drop-active="true"] .fc-timegrid-slot-lane {
+  @apply border-blue-200;
+}
+
+/* Message d'aide pendant le drag */
+.fc[data-drop-active="true"]::before {
+  content: "📅 Déposez la tâche sur un créneau";
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Styles spécifiques pour Pragmatic DND */
+.calendar-drag-over {
+  @apply bg-blue-50/90 border-4 border-blue-400 border-dashed rounded-lg;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.4);
+  position: relative;
+}
+
+/* Surbrillance des créneaux individuels */
+.slot-drag-over {
+  @apply bg-blue-100/80 border-2 border-blue-400;
+  transition: all 0.2s ease-in-out;
+  box-shadow: inset 0 0 15px rgba(59, 130, 246, 0.3);
+  transform: scale(1.02);
+  z-index: 10;
+  position: relative;
+}
+
+/* Animation pour les créneaux horaires */
+.fc-timegrid-slot.slot-drag-over {
+  @apply bg-gradient-to-r from-blue-100 to-blue-200;
+  border-left: 3px solid #3b82f6;
+  border-right: 3px solid #3b82f6;
+}
+
+/* Animation pour les jours (vue mois) */
+.fc-day.slot-drag-over,
+.fc-daygrid-day.slot-drag-over {
+  @apply bg-gradient-to-br from-blue-100 to-blue-200;
+  border: 3px solid #3b82f6;
+  border-radius: 8px;
+}
+
+/* Indicateur de temps pour les créneaux */
+.fc-timegrid-slot.slot-drag-over::before {
+  content: "📅 Déposer ici";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Indicateur pour les jours */
+.fc-day.slot-drag-over::before,
+.fc-daygrid-day.slot-drag-over::before {
+  content: "📅 Déposer ici";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.calendar-drag-over::before {
+  content: "📅 Déposez la tâche ici";
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+}
+
+/* Amélioration du feedback pour les slots de temps */
+.calendar-drag-over .fc-timegrid-slot {
+  @apply transition-all duration-200;
+}
+
+.calendar-drag-over .fc-timegrid-slot:hover {
+  @apply bg-blue-100/80 border-blue-300;
+  transform: scale(1.01);
+  box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+/* Amélioration du feedback pour les jours (vue mois) */
+.calendar-drag-over .fc-day {
+  @apply transition-all duration-200;
+}
+
+.calendar-drag-over .fc-day:hover {
+  @apply bg-blue-100/80 border-blue-300;
+  transform: scale(1.01);
+  box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+/* Nouveaux styles pour le highlight de créneaux de 2h */
+.time-slot-highlight {
+  @apply bg-gradient-to-r from-blue-100/90 to-blue-200/90;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 6px;
+  box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.4),
+    0 0 15px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  z-index: 10;
+}
+
+/* Style pour le highlight de jour (vue mois) */
+.day-slot-highlight {
+  @apply bg-gradient-to-br from-blue-100/90 to-blue-200/90;
+  border: 3px solid #3b82f6 !important;
+  border-radius: 8px;
+  box-shadow: inset 0 0 25px rgba(59, 130, 246, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  z-index: 10;
+  transform: scale(1.02);
+}
+
+/* Animation d'entrée pour les highlights */
+.time-slot-highlight,
+.day-slot-highlight {
+  animation: highlight-enter 0.2s ease-out;
+}
+
+@keyframes highlight-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Amélioration du contraste pour les highlights de créneaux */
+.time-slot-highlight::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1),
+    rgba(59, 130, 246, 0.05)
+  );
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Indicateur visuel pour le premier slot du créneau de 2h */
+.time-slot-highlight:first-of-type::after {
+  content: "📅 2h";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Indicateur pour les jours */
+.day-slot-highlight::after {
+  content: "📅 Déposer ici (2h)";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Indicateur de position de drop précise */
+.drop-indicator {
+  position: absolute;
+  background: rgba(59, 130, 246, 0.8);
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 999;
+  animation: drop-indicator-pulse 1s infinite;
+}
+
+@keyframes drop-indicator-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* Amélioration du style de drag pour TaskCard avec Pragmatic DND */
+.task-card[data-dragging="true"] {
+  @apply rotate-3 scale-105 opacity-90 shadow-2xl;
+  transition: all 0.2s ease-out;
+  border: 2px solid #3b82f6;
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 1000;
+}
+
+/* Animation d'entrée/sortie pour le feedback */
+.calendar-drag-over {
+  animation: drag-enter 0.3s ease-out;
+}
+
+@keyframes drag-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Styles pour les différents types de zones de drop */
+.drop-zone-time-slot {
+  @apply bg-green-50/80 border-green-400;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+}
+
+.drop-zone-day-slot {
+  @apply bg-blue-50/80 border-blue-400;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+/* Amélioration de la visibilité pendant le drag */
+.calendar-drag-over .fc-event {
+  @apply opacity-60;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Indicateur de succès après drop */
+.drop-success {
+  animation: drop-success 0.5s ease-out;
+}
+
+@keyframes drop-success {
+  0% {
+    background: rgba(34, 197, 94, 0.2);
+    transform: scale(1.05);
+  }
+  100% {
+    background: transparent;
+    transform: scale(1);
+  }
+}
+
+/* Styles pour les tâches en cours de sauvegarde */
+.fc-event[data-saving="true"] {
+  @apply relative;
+  opacity: 0.8;
+  animation: saving-pulse 1.5s infinite;
+}
+
+.fc-event[data-saving="true"]::before {
+  content: "💾";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 10px;
+  z-index: 10;
+  animation: saving-icon-spin 2s linear infinite;
+}
+
+@keyframes saving-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes saving-icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Indicateur discret de sauvegarde pour TaskCard */
+.task-card[data-saving="true"] {
+  @apply relative;
+  opacity: 0.9;
+  animation: saving-pulse 1.5s infinite;
+}
+
+.task-card[data-saving="true"]::after {
+  content: "💾";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 12px;
+  z-index: 10;
+  animation: saving-icon-spin 2s linear infinite;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

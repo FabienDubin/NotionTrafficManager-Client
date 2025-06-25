@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 //MEDIAS
-import { Home, SquareUserRound, Settings2 } from "lucide-react";
+import { Home, SquareUserRound, Settings2, Bug } from "lucide-react";
 import Monogram from "../Monogram";
 
 //List of Items in the Sidebar
@@ -26,6 +26,7 @@ import Monogram from "../Monogram";
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Users", url: "/dashboard/users", icon: SquareUserRound },
+  { title: "Bug Report", url: "/dashboard/bug-reports", icon: Bug },
   { title: "Setting", url: "/dashboard/settings", icon: Settings2 },
 ];
 
@@ -63,10 +64,10 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
         <SidebarGroup>
-          <Link to="/">
+          <Link to="/calendar">
             <Button className="w-full">
               <Home />
-              Go to Home
+              Go to Calendar
             </Button>
           </Link>
         </SidebarGroup>

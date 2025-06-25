@@ -18,6 +18,7 @@ import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/Dashboard/AdminDashboard";
 import UsersDashboard from "./pages/Dashboard/UsersDashboard";
+import BugReportsDashboard from "./pages/Dashboard/BugReportsDashboard";
 import NotFound from "./pages/NotFound";
 import NotAuthorized from "./pages/NotAuthorized";
 import Layout from "./components/Sidebar/Layout";
@@ -80,6 +81,10 @@ function App() {
                         {/* Here are all the pages of the admin dashboard */}
                         <Route path="" element={<AdminDashboard />} />
                         <Route path="users" element={<UsersDashboard />} />
+                        <Route
+                          path="bug-reports"
+                          element={<BugReportsDashboard />}
+                        />
                         <Route
                           path="settings"
                           element={<SettingsDashboard />}

@@ -31,6 +31,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Bug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -117,6 +118,7 @@ const Navbar = () => {
                 <Link to="/profile">
                   <DropdownMenuItem>Mon Profil</DropdownMenuItem>
                 </Link>
+
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -151,7 +153,7 @@ const Navbar = () => {
       )}
 
       {/* When the user is not logged in, show the login and sign up buttons. */}
-      {!isLoggedIn && (
+      {/* {!isLoggedIn && (
         <div>
           <Button
             variant="secondary"
@@ -165,7 +167,7 @@ const Navbar = () => {
             <LogIn /> Login
           </Button>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

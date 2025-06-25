@@ -1,9 +1,19 @@
 import { AuthContext } from "@/context/auth.context";
 import React, { useContext } from "react";
+import { Link } from "react-router-dom";
+import { Bug, Users, Settings, BarChart3 } from "lucide-react";
 
 import ChartTemplate from "@/components/Charts/ChartTemplate";
 import PieChartTemplate from "@/components/Charts/PieChartTemplate";
 import BarChartTemplate from "@/components/Charts/BarChartTemplate";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 //DATA SAMPLES FOR THE CHARTS DATA AND CHART CONFIGURATION
 //Should be defined in your actual data fetching function
@@ -100,6 +110,60 @@ const AdminDashboard = () => {
       <p className="px-4 mt-6 text-gray-600 font-light">
         This is an example of dataviz you can display on that page
       </p>
+
+      {/* Navigation rapide */}
+      <div className="p-4">
+        <h3 className="text-lg font-semibold mb-4">Accès rapide</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Link to="/dashboard/users">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Gestion des utilisateurs
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Gérer les comptes utilisateurs et les permissions
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/dashboard/bug-reports">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Bug Reports
+                </CardTitle>
+                <Bug className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Gérer les rapports de bugs soumis par les utilisateurs
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/dashboard/settings">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Paramètres
+                </CardTitle>
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Configuration générale de l'application
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
 
       <div className="p-4 w-full flex items-stretch justify-between gap-4">
         <ChartTemplate
