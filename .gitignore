@@ -37,9 +37,9 @@ ehthumbs.db
 *.code-workspace
 
 # Build files
-client/build/
-client/dist/
-server/build/
+build/
+dist/
+
 
 # Dependencies spécifiques (si jamais)
 client/node_modules/

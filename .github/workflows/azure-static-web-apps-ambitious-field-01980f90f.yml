@@ -29,8 +29,7 @@ jobs:
           action: "upload"
           app_location: "/" # chemin vers ton frontend (racine)
           api_location: "" # pas d’API
-          app_artifact_location: "dist" # sortie du build Vite
-        # ❌ Ne mets pas de bloc `env:` ici ! Les variables viennent du portail Azure
+          output_location: "dist" # sortie du build Vite
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
