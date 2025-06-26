@@ -27,12 +27,13 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_FIELD_01980F90F }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/" # 📂 racine du projet
-          api_location: "" # ❌ pas d'API serverless
-          app_artifact_location: "dist" # 📦 sortie Vite
-        # ❌ PAS de app_build_command → Azure utilise automatiquement vite pour build
-        # ❌ PAS de deployment_environment → inutile ici
-        # ❌ PAS de bloc env → les VITE_ sont injectées depuis Azure Portal
+          app_location: "/"
+          api_location: ""
+          app_artifact_location: "dist"
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_FALLBACK_IMG: ${{ secrets.VITE_FALLBACK_IMG }}
+          VITE_DEFAULT_PASS: ${{ secrets.VITE_DEFAULT_PASS }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
