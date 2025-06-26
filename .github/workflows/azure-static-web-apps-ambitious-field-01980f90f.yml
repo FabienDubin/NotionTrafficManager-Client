@@ -19,25 +19,18 @@ jobs:
         with:
           submodules: true
           lfs: false
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_FIELD_01980F90F }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/" # App source code path
-          api_location: "" # Api source code path - optional
-          #output_location: "dist" # Built app content directory - optional
-          app_artifact_location: "dist"
-        env:
-          VITE_FALLBACK_IMG: ${{secrets.VITE_FALLBACK_IMG}}
-          VITE_API_URL: ${{secrets.VITE_API_URL}}
-          VITE_DEFAULT_PASS: ${{secrets.VITE_DEFAULT_PASS}}
-
-          ###### End of Repository/Build Configurations ######
+          app_location: "/" # chemin vers ton frontend (racine)
+          api_location: "" # pas d’API
+          app_artifact_location: "dist" # sortie du build Vite
+        # ❌ Ne mets pas de bloc `env:` ici ! Les variables viennent du portail Azure
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
