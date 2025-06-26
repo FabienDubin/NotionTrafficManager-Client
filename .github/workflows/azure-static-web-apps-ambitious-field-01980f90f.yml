@@ -29,7 +29,7 @@ jobs:
           action: "upload"
           app_location: "/" # chemin vers ton frontend (racine)
           api_location: "" # pas d’API
-          output_location: "dist" # sortie du build Vite
+          app_artifact_location: "dist" # sortie du build Vite
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
