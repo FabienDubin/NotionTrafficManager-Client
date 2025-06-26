@@ -30,7 +30,8 @@ jobs:
           app_location: "/" # chemin vers ton frontend (racine)
           api_location: "" # pas d’API
           app_artifact_location: "dist" # sortie du build Vite
-          app_build_command: npm run build
+          app_build_command: npm run build # force Azure à utiliser la commande Vite pour le build
+          deployment_environment: "production"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
