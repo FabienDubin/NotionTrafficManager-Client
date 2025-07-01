@@ -103,7 +103,7 @@ const TaskEditSheet = ({
 
       setFormData({
         name: task.name || "",
-        projectId: task.project?.[0] || "",
+        projectId: task.projectId || task.project?.[0] || "",
         startDate,
         startTime,
         endDate,
