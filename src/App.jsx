@@ -45,7 +45,7 @@ function App() {
 
         <RootLayout>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Navigate to="/calendar" replace />} />
             <Route
               path="/login"
               element={
