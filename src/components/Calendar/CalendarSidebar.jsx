@@ -9,7 +9,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Settings, Filter, Search, Bug, ChevronDown } from "lucide-react";
+import {
+  Settings,
+  Filter,
+  Search,
+  Bug,
+  ChevronDown,
+  SquareUserRound,
+  CalendarCheck,
+} from "lucide-react";
 import BasicMultiSelectCombobox from "@/components/BasicMultiSelectCombobox";
 import TaskCard from "./TaskCard";
 import TaskEditSheet from "./TaskEditSheet";
@@ -31,6 +39,7 @@ const CalendarSidebar = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [editingTask, setEditingTask] = useState(null);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+  const [openAccordion, setOpenAccordion] = useState("unassignedTasks");
 
   const isTaskUnassigned = (task) => {
     const hasNoWorkPeriod =
@@ -102,17 +111,13 @@ const CalendarSidebar = ({
   };
 
   return (
-    <div className="w-80 border-r bg-background flex flex-col h-full relative">
+    <div className="w-80 border-r bg-background flex flex-col h-screen">
       {/* Filtres - Section compacte */}
       <div className="p-6 border-b space-y-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
-            Filtres
-          </h2>
+        <div className="flex items-center gap-2 font-medium text-muted-foreground">
+          <SquareUserRound className="h-4 w-4" />
+          Personnes
         </div>
-
-        {/* Filtre principal - Créatifs (toujours visible) */}
         <BasicMultiSelectCombobox
           options={users}
           value={filters.selectedCreatives || []}
@@ -120,103 +125,139 @@ const CalendarSidebar = ({
             handleFilterChange("selectedCreatives", value)
           }
           placeholder="Sélectionner des créatifs..."
-          label="Créatifs"
         />
+      </div>
 
-        {/* Filtres avancés dans un accordéon */}
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="advanced-filters" className="border-none">
-            <AccordionTrigger className="py-2 px-0 text-sm font-medium text-muted-foreground hover:text-foreground">
+      {/* Accordéon */}
+      <div className="flex flex-col flex-grow overflow-hidden">
+        <Accordion
+          type="single"
+          className="w-full flex flex-col flex-grow"
+          value={openAccordion}
+          onValueChange={(value) => {
+            if (value) setOpenAccordion(value);
+          }}
+        >
+          {/* Filtres avancés */}
+          <AccordionItem
+            value="advanced-filters"
+            className={`${
+              openAccordion === "advanced-filters"
+                ? "flex-grow flex flex-col overflow-hidden"
+                : "flex-shrink-0"
+            }`}
+          >
+            <AccordionTrigger className="py-2 px-6 text-sm font-medium text-muted-foreground hover:text-foreground">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 Filtres avancés
               </div>
             </AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2 h-auto min-h-[320px] overflow-visible relative z-30 bg-background">
-              <BasicMultiSelectCombobox
-                options={clients}
-                value={filters.selectedClients || []}
-                onValueChange={(value) =>
-                  handleFilterChange("selectedClients", value)
-                }
-                placeholder="Sélectionner des clients..."
-                label="Clients"
-              />
-
-              <BasicMultiSelectCombobox
-                options={filteredProjects}
-                value={filters.selectedProjects || []}
-                onValueChange={(value) =>
-                  handleFilterChange("selectedProjects", value)
-                }
-                placeholder="Sélectionner des projets..."
-                label="Projets"
-              />
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="show-completed"
-                  checked={filters.showCompleted || false}
-                  onCheckedChange={(checked) =>
-                    handleFilterChange("showCompleted", checked)
+            <AccordionContent
+              className={`px-6 pb-4 ${
+                openAccordion === "advanced-filters"
+                  ? "flex-grow overflow-y-auto flex flex-col"
+                  : ""
+              }`}
+            >
+              <div className="space-y-4 min-h-[57vh]">
+                <BasicMultiSelectCombobox
+                  options={clients}
+                  value={filters.selectedClients || []}
+                  onValueChange={(value) =>
+                    handleFilterChange("selectedClients", value)
                   }
+                  placeholder="Sélectionner des clients..."
+                  label="Clients"
                 />
-                <Label
-                  htmlFor="show-completed"
-                  className="text-sm cursor-pointer"
-                >
-                  Afficher les tâches terminées
-                </Label>
+                <BasicMultiSelectCombobox
+                  options={filteredProjects}
+                  value={filters.selectedProjects || []}
+                  onValueChange={(value) =>
+                    handleFilterChange("selectedProjects", value)
+                  }
+                  placeholder="Sélectionner des projets..."
+                  label="Projets"
+                />
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="show-completed"
+                    checked={filters.showCompleted || false}
+                    onCheckedChange={(checked) =>
+                      handleFilterChange("showCompleted", checked)
+                    }
+                  />
+                  <Label
+                    htmlFor="show-completed"
+                    className="text-sm cursor-pointer"
+                  >
+                    Afficher les tâches terminées
+                  </Label>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Tâches non assignées */}
+          <AccordionItem
+            value="unassignedTasks"
+            className="flex-grow flex flex-col overflow-hidden"
+          >
+            <AccordionTrigger className="py-2 px-6 text-sm font-medium text-muted-foreground hover:text-foreground">
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="h-4 w-4" />
+                <h3 className="font-medium text-muted-foreground">
+                  Tâches non assignées ({filteredUnassignedTasks.length}
+                  {searchQuery &&
+                    unassignedTasks.length !== filteredUnassignedTasks.length &&
+                    ` sur ${unassignedTasks.length}`}
+                  )
+                </h3>
+              </div>
+            </AccordionTrigger>
+
+            <AccordionContent className="p-0 flex-1 overflow-hidden">
+              <div className="flex flex-col h-[calc(100vh-300px)] overflow-hidden">
+                {/* Search */}
+                <div className="p-2">
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher par nom, projet ou client..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Scrollable zone */}
+                <div className="flex-1 overflow-y-auto px-2 pb-10 space-y-2 min-h-0">
+                  {filteredUnassignedTasks.length === 0 ? (
+                    <div className="text-center py-8  text-muted-foreground text-sm">
+                      {searchQuery
+                        ? "Aucune tâche trouvée pour cette recherche"
+                        : "Aucune tâche non assignée"}
+                    </div>
+                  ) : (
+                    filteredUnassignedTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onTaskClick={handleTaskClick}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
       </div>
 
-      {/* Recherche + Liste scrollable */}
-      <div className="flex-1 flex flex-col">
-        <div className="p-6 pb-0">
-          <h3 className="font-medium text-muted-foreground mb-3">
-            Tâches non assignées ({filteredUnassignedTasks.length}
-            {searchQuery &&
-              unassignedTasks.length !== filteredUnassignedTasks.length &&
-              ` sur ${unassignedTasks.length}`}
-            )
-          </h3>
-
-          <div className="relative mb-2">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par nom, projet ou client..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-y-auto px-6 py-4 flex-1 space-y-2 z-10 relative">
-          {filteredUnassignedTasks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              {searchQuery
-                ? "Aucune tâche trouvée pour cette recherche"
-                : "Aucune tâche non assignée"}
-            </div>
-          ) : (
-            filteredUnassignedTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onTaskClick={handleTaskClick}
-              />
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Footer - Toujours visible en bas */}
-      <div className="p-4 border-t bg-background flex-shrink-0">
-        <div className="flex justify-between items-center mb-20">
+      {/* Footer sticky */}
+      <div className="p-4 border-t bg-background sticky bottom-0 z-50">
+        <div className="flex justify-between items-center">
           <BugReportModal
             trigger={
               <Button
