@@ -12,5 +12,5 @@ const API_URL =
   "https://notiontrafficmanager-server-fggza5grhwdfayc0.francecentral-01.azurewebsites.net";
 export { API_URL };
 
-const DEFAULT_PASS = import.meta.env.VITE_DEFAULT_PASS || "pass123";
+const DEFAULT_PASS = import.meta.env.VITE_DEFAULT_PASS || "Pass123";
 export { DEFAULT_PASS };

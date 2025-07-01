@@ -10,14 +10,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Pencil } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Pencil, Send, Trash2 } from "lucide-react";
 import { FALLBACK_IMG } from "@/config/envVar.config";
 import authService from "@/services/auth.service";
 import { DEFAULT_PASS } from "@/config/envVar.config";
 import { AuthContext } from "@/context/auth.context";
 import { useToast } from "@/hooks/use-toast";
 
-const UserForm = ({ user, onClose }) => {
+const UserForm = ({ user, onClose, handleDeleteUser }) => {
   const isEditMode = Boolean(user);
   const { toast } = useToast();
   //CONTEXT
@@ -99,6 +119,7 @@ const UserForm = ({ user, onClose }) => {
       if (isEditMode) {
         await userService.updateUser(formData._id, updatedUser);
       } else {
+        console.log(updatedUser);
         const response = await authService.signup(updatedUser);
         updatedUser = response.data;
       }
@@ -203,22 +224,52 @@ const UserForm = ({ user, onClose }) => {
           </Select>
         </div>
       )}
-
-      <Button
-        className="mt-4"
-        onClick={(e) => {
-          e.preventDefault();
-          sendPasswordReset();
-        }}
-        variant="outline"
-        disabled={!isEditMode}
-      >
-        Reset password
-      </Button>
+      <div className="w-full flex items-center mt-4">
+        <Button
+          className="mr-2"
+          onClick={(e) => {
+            e.preventDefault();
+            sendPasswordReset();
+          }}
+          variant="outline"
+          disabled={!isEditMode}
+        >
+          <Send />
+          Send reset password
+        </Button>
+      </div>
       <div className="flex justify-end mt-5 ">
-        <Button type="submit" className="w-32">
+        <Button type="submit" className="w-full mr-2">
           {isEditMode ? "Save" : "Create"}
         </Button>
+        {window.location.pathname === "/dashboard/users" && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="mb-6 w-4">
+                <Trash2 />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete{" "}
+                  {user?.firstName}'s user account and remove its data from our
+                  servers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-500"
+                  onClick={() => handleDeleteUser()}
+                >
+                  Continue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </form>
   );

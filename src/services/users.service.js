@@ -62,6 +62,12 @@ class UserService {
 
     return this.api.put(`/users/update-image/${userId}`, imageData);
   }
+
+  // PUT /change-password/:userId
+  // Changes a user's password (admin only)
+  changeUserPassword(userId, password) {
+    return this.api.put(`/users/change-password/${userId}`, { password });
+  }
 }
 
 //Create one instance of the service

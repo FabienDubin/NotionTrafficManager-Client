@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Palette, Eye, Save, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const ConfigurationModal = ({
   open,
@@ -32,6 +33,8 @@ const ConfigurationModal = ({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeColorPicker, setActiveColorPicker] = useState(null);
+  const [editingColorCode, setEditingColorCode] = useState(null);
+  const [tempColorValue, setTempColorValue] = useState("");
 
   const availableProperties = [
     { id: "client", label: "Client" },
@@ -52,6 +55,11 @@ const ConfigurationModal = ({
       });
       setLocalClientColors(colorsMap);
       setVisibleProperties(preferences?.visibleProperties || []);
+    } else {
+      // Réinitialiser les états d'édition quand le modal se ferme
+      setEditingColorCode(null);
+      setTempColorValue("");
+      setActiveColorPicker(null);
     }
   }, [open, clients, clientColors, preferences]);
 
@@ -66,6 +74,40 @@ const ConfigurationModal = ({
     setVisibleProperties((prev) =>
       checked ? [...prev, propertyId] : prev.filter((id) => id !== propertyId)
     );
+  };
+
+  // Fonctions utilitaires pour l'édition des codes hex
+  const isValidHexColor = (color) => {
+    return /^#?[0-9A-Fa-f]{6}$/.test(color);
+  };
+
+  const normalizeHexColor = (color) => {
+    return color.startsWith("#") ? color : `#${color}`;
+  };
+
+  // Gestionnaires pour l'édition inline du code hex
+  const handleColorCodeClick = (clientName, currentColor) => {
+    setEditingColorCode(clientName);
+    // Enlever le # pour l'édition
+    setTempColorValue(currentColor.replace("#", ""));
+  };
+
+  const handleColorCodeBlur = (clientName) => {
+    if (isValidHexColor(tempColorValue)) {
+      const normalizedColor = normalizeHexColor(tempColorValue);
+      handleColorChange(clientName, normalizedColor);
+    }
+    setEditingColorCode(null);
+    setTempColorValue("");
+  };
+
+  const handleColorCodeKeyDown = (e, clientName) => {
+    if (e.key === "Enter") {
+      handleColorCodeBlur(clientName);
+    } else if (e.key === "Escape") {
+      setEditingColorCode(null);
+      setTempColorValue("");
+    }
   };
 
   const generateRandomColor = () => {
@@ -90,6 +132,16 @@ const ConfigurationModal = ({
       "#00B894",
       "#FDCB6E",
       "#6C5CE7",
+      "#8E44AD",
+      "#27AE60",
+      "#E84393",
+      "#00CEC9",
+      "#D35400",
+      "#BDC3C7",
+      "#C0392B",
+      "#16A085",
+      "#F8C291",
+      "#2D3436",
     ];
     return palette[Math.floor(Math.random() * palette.length)];
   };
@@ -220,15 +272,39 @@ const ConfigurationModal = ({
                               />
                               <Label>{client.name}</Label>
                             </div>
-                            <Badge
-                              style={{
-                                backgroundColor: currentColor + "20",
-                                color: currentColor,
-                              }}
-                              variant="secondary"
-                            >
-                              {currentColor}
-                            </Badge>
+                            {editingColorCode === client.name ? (
+                              <Input
+                                value={tempColorValue}
+                                onChange={(e) =>
+                                  setTempColorValue(e.target.value)
+                                }
+                                onBlur={() => handleColorCodeBlur(client.name)}
+                                onKeyDown={(e) =>
+                                  handleColorCodeKeyDown(e, client.name)
+                                }
+                                className="w-20 h-6 text-xs font-mono"
+                                autoFocus
+                                placeholder="6 caractères"
+                                maxLength={6}
+                              />
+                            ) : (
+                              <Badge
+                                style={{
+                                  backgroundColor: currentColor + "20",
+                                  color: currentColor,
+                                }}
+                                variant="secondary"
+                                className="cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() =>
+                                  handleColorCodeClick(
+                                    client.name,
+                                    currentColor
+                                  )
+                                }
+                              >
+                                {currentColor}
+                              </Badge>
+                            )}
                           </div>
                           {isPickerOpen && (
                             <div className="relative z-20 mt-2">
