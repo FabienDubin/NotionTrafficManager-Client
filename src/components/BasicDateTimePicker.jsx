@@ -112,16 +112,16 @@ const BasicDateTimePicker = ({
   ];
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-3">
+    <div ref={containerRef} className="flex flex-col gap-3 w-full">
       <Label htmlFor={id} className="px-1">
         {label}
       </Label>
-      <div className="flex gap-2">
-        <div className="relative">
+      <div className="flex gap-2 w-full">
+        <div className="relative w-full">
           <Button
             variant="outline"
             id={id}
-            className={`w-32 justify-between font-normal ${
+            className={`w-full justify-between font-normal ${
               disabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
             onClick={() => !disabled && setOpen(!open)}
@@ -214,14 +214,14 @@ const BasicDateTimePicker = ({
           )}
         </div>
 
-        <Input
+        {/* <Input
           type="time"
           step="1"
           value={time || "09:00"}
           onChange={(e) => onTimeChange(e.target.value)}
           className="w-24 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
           disabled={disabled || disableTime}
-        />
+        /> */}
       </div>
     </div>
   );

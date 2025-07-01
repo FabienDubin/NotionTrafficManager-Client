@@ -27,7 +27,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, Building, Save, X, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -57,6 +64,8 @@ const TaskEditSheet = ({
     status: "",
     assignedUsers: [],
     notes: "",
+    addToCalendar: false,
+    addToRetroPlanning: false,
   });
 
   const [loading, setLoading] = useState(false);
@@ -102,6 +111,8 @@ const TaskEditSheet = ({
         status: task.status || "",
         assignedUsers: task.assignedUsers || [],
         notes: task.commentaire || task.notes || "",
+        addToCalendar: task.addToCalendar || false,
+        addToRetroPlanning: task.addToRetroPlanning || false,
       });
     }
   }, [task]);
@@ -289,6 +300,8 @@ const TaskEditSheet = ({
       status: formData.status,
       assignedUsers: formData.assignedUsers,
       notes: formData.notes,
+      addToCalendar: formData.addToCalendar,
+      addToRetroPlanning: formData.addToRetroPlanning,
     };
 
     // Fermer immédiatement la sheet pour une UX fluide
@@ -319,13 +332,18 @@ const TaskEditSheet = ({
           ? "Une erreur est survenue lors de la création. Voulez-vous réessayer ?"
           : "Une erreur est survenue lors de la sauvegarde. Voulez-vous réessayer ?",
         variant: "destructive",
-        action: {
-          label: "Réessayer",
-          onClick: () => {
-            // Réouvrir la sheet avec les données du formulaire
-            onOpenChange(true);
-          },
-        },
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Réouvrir la sheet avec les données du formulaire
+              onOpenChange(true);
+            }}
+          >
+            Réessayer
+          </Button>
+        ),
       });
     }
   };
@@ -352,7 +370,7 @@ const TaskEditSheet = ({
     return colorMap[status.color] || colorMap.default;
   };
 
-  // Gestionnaire pour la suppression avec UX optimisée
+  // Gestionnaire pour la suppression avec UX améliorée (garde la sheet ouverte)
   const handleDelete = async () => {
     if (!task || !onDelete) return;
 
@@ -366,39 +384,29 @@ const TaskEditSheet = ({
       return;
     }
 
-    // Fermer immédiatement la sheet pour une UX fluide
-    onClose();
-
-    // Toast de progression
-    toast({
-      title: "Suppression en cours...",
-      description: "Synchronisation avec Notion",
-    });
+    // Activer l'état de chargement SANS fermer la sheet
+    setLoading(true);
 
     try {
-      // Suppression en arrière-plan avec la fonction optimisée
+      // Suppression avec la fonction optimisée
       await onDelete(task.id, {
-        showProgressToast: false, // Déjà affiché ci-dessus
+        showProgressToast: false, // Pas besoin, on a l'indicateur de chargement
         showSuccessToast: true,
       });
 
-      // Toast de succès géré par la fonction onDelete
+      // Fermer la sheet seulement après succès
+      onClose();
     } catch (error) {
       console.error("Error deleting task:", error);
 
-      // En cas d'erreur, proposer de réouvrir la sheet
+      // Désactiver le chargement pour permettre un nouvel essai
+      setLoading(false);
+
+      // Afficher l'erreur sans fermer la sheet
       toast({
         title: "Erreur de suppression",
-        description:
-          "Une erreur est survenue lors de la suppression. Voulez-vous réessayer ?",
+        description: `Une erreur est survenue lors de la suppression: ${error.message}`,
         variant: "destructive",
-        action: {
-          label: "Réessayer",
-          onClick: () => {
-            // Réouvrir la sheet avec les données du formulaire
-            onOpenChange(true);
-          },
-        },
       });
     }
   };
@@ -555,6 +563,50 @@ const TaskEditSheet = ({
               </Select>
             </div>
 
+            {/* Propriétés Notion supplémentaires */}
+            <div className="space-y-3">
+              <Accordion type="single" collapsible>
+                <AccordionItem value="advanced-options" className="border-b-0">
+                  <AccordionTrigger>Options avancées</AccordionTrigger>
+                  <AccordionContent>
+                    {/* Ajouter au calendrier */}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="add-to-calendar"
+                        checked={formData.addToCalendar || false}
+                        onCheckedChange={(checked) =>
+                          handleInputChange("addToCalendar", checked)
+                        }
+                      />
+                      <Label
+                        htmlFor="add-to-calendar"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        Ajouter au calendrier
+                      </Label>
+                    </div>
+
+                    {/* Ajouter au rétroplanning */}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="add-to-retroplanning"
+                        checked={formData.addToRetroPlanning || false}
+                        onCheckedChange={(checked) =>
+                          handleInputChange("addToRetroPlanning", checked)
+                        }
+                      />
+                      <Label
+                        htmlFor="add-to-retroplanning"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        Ajouter au rétroplanning
+                      </Label>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
             {/* Notes */}
             <div>
               <Label htmlFor="notes">Notes</Label>
@@ -614,7 +666,6 @@ const TaskEditSheet = ({
 
           {/* Boutons d'action */}
           <div className="space-y-3 pt-4 border-t">
-            {/* Boutons principaux */}
             <div className="flex space-x-2">
               <Button
                 onClick={handleSave}
@@ -633,63 +684,61 @@ const TaskEditSheet = ({
                 <X className="h-4 w-4 mr-2" />
                 Annuler
               </Button>
+              {/* Bouton de suppression - seulement pour les tâches existantes */}
+              {!task.isNew && task.id !== "new" && onDelete && (
+                <div>
+                  <AlertDialog
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={loading}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Confirmer la suppression
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Êtes-vous sûr de vouloir supprimer cette tâche ?
+                          <br />
+                          <strong>"{formData.name || task.name}"</strong>
+                          <br />
+                          <br />
+                          Cette action est définitive et supprimera la tâche du
+                          calendrier et de la base de données Notion.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel
+                          onClick={() => setIsDeleteDialogOpen(false)}
+                        >
+                          Annuler
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            setIsDeleteDialogOpen(false);
+                            handleDelete();
+                          }}
+                          className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer définitivement
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </div>
-
-            {/* Bouton de suppression - seulement pour les tâches existantes */}
-            {!task.isNew && task.id !== "new" && onDelete && (
-              <div className="flex justify-center pt-2 border-t border-gray-100">
-                <AlertDialog
-                  open={isDeleteDialogOpen}
-                  onOpenChange={setIsDeleteDialogOpen}
-                >
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={loading}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => setIsDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Supprimer la tâche
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Confirmer la suppression
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Êtes-vous sûr de vouloir supprimer cette tâche ?
-                        <br />
-                        <strong>"{formData.name || task.name}"</strong>
-                        <br />
-                        <br />
-                        Cette action est définitive et supprimera la tâche du
-                        calendrier et de la base de données Notion.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel
-                        onClick={() => setIsDeleteDialogOpen(false)}
-                      >
-                        Annuler
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          setIsDeleteDialogOpen(false);
-                          handleDelete();
-                        }}
-                        className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer définitivement
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
           </div>
         </div>
       </SheetContent>

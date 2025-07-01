@@ -701,15 +701,12 @@ export const useCalendar = () => {
   // Version throttled pour la compatibilité (drag & drop, etc.)
   const throttledUpdateTask = throttle(updateTaskOptimistic, 1000);
 
-  // Supprimer une tâche avec UX optimisée
+  // Supprimer une tâche avec UX simplifiée (pas de suppression optimiste)
   const deleteTask = useCallback(
     async (taskId, options = {}) => {
       console.log("🗑️ Starting task deletion:", taskId);
 
       const { showSuccessToast = true, showProgressToast = false } = options;
-
-      // Sauvegarder l'état original pour le rollback
-      let originalTask = null;
 
       // Toast de progression si demandé
       if (showProgressToast) {
@@ -720,18 +717,15 @@ export const useCalendar = () => {
       }
 
       try {
-        // Retrait optimiste immédiat de la tâche
+        // Appel API direct SANS suppression optimiste pour éviter les conflits d'état
+        console.log("📡 Calling API to delete task in Notion...");
+        await calendarService.deleteTask(taskId);
+        console.log("✅ API call successful - task deleted");
+
+        // Suppression de l'état local seulement APRÈS succès de l'API
         setState((prev) => {
-          const taskIndex = prev.tasks.findIndex((task) => task.id === taskId);
-          if (taskIndex === -1) {
-            console.warn("⚠️ Task not found for deletion:", taskId);
-            return prev;
-          }
-
-          originalTask = prev.tasks[taskIndex];
           const updatedTasks = prev.tasks.filter((task) => task.id !== taskId);
-
-          console.log("✅ Task removed from state immediately:", taskId);
+          console.log("✅ Task removed from state after API success:", taskId);
 
           return {
             ...prev,
@@ -739,43 +733,14 @@ export const useCalendar = () => {
           };
         });
 
-        // Appel API en arrière-plan
-        console.log("📡 Calling API to delete task in Notion (background)...");
-        await calendarService.deleteTask(taskId);
-        console.log("✅ API call successful - task deleted");
-
         // Recharger les tâches non assignées au cas où la tâche supprimée était assignée
         loadUnassignedTasks().catch((error) => {
           console.warn("⚠️ Failed to reload unassigned tasks:", error);
         });
 
-        // Invalidation sélective du cache
-        if (originalTask && originalTask.workPeriod) {
-          const startDate = originalTask.workPeriod.start || originalTask.start;
-          const endDate = originalTask.workPeriod.end || originalTask.end;
-
-          if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            // Invalider la semaine de la tâche supprimée
-            const weekStart = new Date(start);
-            weekStart.setDate(start.getDate() - start.getDay() + 1);
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
-
-            const cacheKey = `tasks-${weekStart.toISOString().split("T")[0]}-${
-              weekEnd.toISOString().split("T")[0]
-            }`;
-
-            if (cacheManager.cache.has(cacheKey)) {
-              cacheManager.cache.delete(cacheKey);
-              console.log(
-                "🗑️ Invalidated cache key for deleted task:",
-                cacheKey
-              );
-            }
-          }
-        }
+        // Invalidation simple du cache
+        cacheManager.clear();
+        console.log("🗑️ Cache cleared after task deletion");
 
         if (showSuccessToast) {
           toast({
@@ -789,20 +754,7 @@ export const useCalendar = () => {
       } catch (error) {
         console.error("❌ Error deleting task:", error);
 
-        // Rollback : remettre la tâche dans l'état
-        if (originalTask) {
-          console.log("🔄 Rolling back task deletion due to error");
-          setState((prev) => ({
-            ...prev,
-            tasks: [...prev.tasks, originalTask].sort((a, b) => {
-              // Trier par date de début pour maintenir l'ordre
-              const dateA = new Date(a.start || a.workPeriod?.start || 0);
-              const dateB = new Date(b.start || b.workPeriod?.start || 0);
-              return dateA - dateB;
-            }),
-          }));
-        }
-
+        // Pas de rollback nécessaire car pas de suppression optimiste
         toast({
           title: "Erreur de suppression",
           description: `Impossible de supprimer la tâche: ${error.message}`,
