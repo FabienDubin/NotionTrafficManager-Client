@@ -9,6 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Settings,
   Filter,
@@ -113,7 +114,7 @@ const CalendarSidebar = ({
   return (
     <div className="w-80 border-r bg-background flex flex-col h-screen">
       {/* Filtres - Section compacte */}
-      <div className="p-6 border-b space-y-4 flex-shrink-0">
+      <div className="p-4 border-b space-y-4 flex-shrink-0">
         <div className="flex items-center gap-2 font-medium text-muted-foreground">
           <SquareUserRound className="h-4 w-4" />
           Personnes
@@ -129,7 +130,7 @@ const CalendarSidebar = ({
       </div>
 
       {/* Accordéon */}
-      <div className="flex flex-col flex-grow overflow-hidden">
+      {/* <div className="flex flex-col flex-grow overflow-hidden">
         <Accordion
           type="single"
           className="w-full flex flex-col flex-grow"
@@ -139,7 +140,7 @@ const CalendarSidebar = ({
           }}
         >
           {/* Filtres avancés */}
-          <AccordionItem
+      {/* <AccordionItem
             value="advanced-filters"
             className={`${
               openAccordion === "advanced-filters"
@@ -160,7 +161,7 @@ const CalendarSidebar = ({
                   : ""
               }`}
             >
-              <div className="space-y-4 min-h-[57vh]">
+              <div className="space-y-4 min-h-[55vh]">
                 <BasicMultiSelectCombobox
                   options={clients}
                   value={filters.selectedClients || []}
@@ -196,10 +197,10 @@ const CalendarSidebar = ({
                 </div>
               </div>
             </AccordionContent>
-          </AccordionItem>
+          </AccordionItem> */}
 
-          {/* Tâches non assignées */}
-          <AccordionItem
+      {/* Tâches non assignées */}
+      {/* <AccordionItem
             value="unassignedTasks"
             className="flex-grow flex flex-col overflow-hidden"
           >
@@ -217,9 +218,9 @@ const CalendarSidebar = ({
             </AccordionTrigger>
 
             <AccordionContent className="p-0 flex-1 overflow-hidden">
-              <div className="flex flex-col h-[calc(100vh-300px)] overflow-hidden">
+              <div className="flex flex-col h-[55vh] overflow-hidden">
                 {/* Search */}
-                <div className="p-2">
+      {/* <div className="p-2">
                   <div className="relative mb-2">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -229,10 +230,10 @@ const CalendarSidebar = ({
                       className="pl-10 text-sm"
                     />
                   </div>
-                </div>
+                </div> */}
 
-                {/* Scrollable zone */}
-                <div className="flex-1 overflow-y-auto px-2 pb-10 space-y-2 min-h-0">
+      {/* Scrollable zone */}
+      {/* <div className="flex-1 overflow-y-auto px-2 pb-10 space-y-2 min-h-0">
                   {filteredUnassignedTasks.length === 0 ? (
                     <div className="text-center py-8  text-muted-foreground text-sm">
                       {searchQuery
@@ -253,6 +254,116 @@ const CalendarSidebar = ({
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+      </div> */}
+
+      <div className="flex flex-col flex-grow overflow-hidden w-full gap-6">
+        <Tabs
+          defaultValue="unassignedTasks"
+          className="flex flex-col flex-grow overflow-hidden w-full"
+        >
+          <TabsList className="px-4 py-2 flex gap-2 mx-4 mt-3">
+            <TabsTrigger
+              value="advanced-filters"
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filtres
+            </TabsTrigger>
+            <TabsTrigger
+              value="unassignedTasks"
+              className="flex items-center gap-2"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              Tâches NA ({filteredUnassignedTasks.length}
+              {searchQuery &&
+                unassignedTasks.length !== filteredUnassignedTasks.length &&
+                ` sur ${unassignedTasks.length}`}
+              )
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Filtres avancés */}
+          <TabsContent
+            value="advanced-filters"
+            className="flex-1 overflow-y-auto px-6 pb-4"
+          >
+            <div className="space-y-4">
+              <BasicMultiSelectCombobox
+                options={clients}
+                value={filters.selectedClients || []}
+                onValueChange={(value) =>
+                  handleFilterChange("selectedClients", value)
+                }
+                placeholder="Sélectionner des clients..."
+                label="Clients"
+              />
+              <BasicMultiSelectCombobox
+                options={filteredProjects}
+                value={filters.selectedProjects || []}
+                onValueChange={(value) =>
+                  handleFilterChange("selectedProjects", value)
+                }
+                placeholder="Sélectionner des projets..."
+                label="Projets"
+              />
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="show-completed"
+                  checked={filters.showCompleted || false}
+                  onCheckedChange={(checked) =>
+                    handleFilterChange("showCompleted", checked)
+                  }
+                />
+                <Label
+                  htmlFor="show-completed"
+                  className="text-sm cursor-pointer"
+                >
+                  Afficher les tâches terminées
+                </Label>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Tâches non assignées */}
+          <TabsContent
+            value="unassignedTasks"
+            className="flex-1 overflow-hidden p-0"
+          >
+            <div className="flex flex-col h-full pb-12 overflow-hidden">
+              {/* Search */}
+              <div className="p-2">
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom, projet ou client..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Scrollable zone */}
+              <div className="flex-1 overflow-y-auto px-2 pb-10 space-y-2 min-h-0">
+                {filteredUnassignedTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    {searchQuery
+                      ? "Aucune tâche trouvée pour cette recherche"
+                      : "Aucune tâche non assignée"}
+                  </div>
+                ) : (
+                  filteredUnassignedTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onTaskClick={handleTaskClick}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Footer sticky */}

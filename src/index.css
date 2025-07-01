@@ -9,6 +9,12 @@
   padding: 0;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
 @layer base {
   :root {
     --background: 0 0% 100%;

@@ -192,7 +192,7 @@ const CalendarView = ({
     views: {
       timeGridWeek: {
         titleFormat: { year: "numeric", month: "short", day: "numeric" },
-        slotMinTime: "08:00:00",
+        slotMinTime: "09:00:00",
         slotMaxTime: "20:00:00",
         slotDuration: "00:15:00", // Créneaux de 15 minutes
         snapDuration: "00:15:00", // Alignement sur 15 minutes
@@ -205,7 +205,7 @@ const CalendarView = ({
         moreLinkClick: "popover",
       },
     },
-    height: "100%",
+    height: "95%",
     locale: "fr",
     firstDay: 1, // Lundi
     weekends: true,
@@ -498,7 +498,7 @@ const CalendarView = ({
   };
 
   return (
-    <div className="h-full p-6">
+    <div className="h-full p-4 pb-10">
       <FullCalendar ref={calendarRef} {...calendarConfig} />
     </div>
   );
