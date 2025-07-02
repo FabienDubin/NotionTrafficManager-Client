@@ -182,7 +182,7 @@ const CalendarSidebar = ({
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="show-completed"
-                  checked={filters.showCompleted || false}
+                  checked={filters.showCompleted ?? true}
                   onCheckedChange={(checked) =>
                     handleFilterChange("showCompleted", checked)
                   }

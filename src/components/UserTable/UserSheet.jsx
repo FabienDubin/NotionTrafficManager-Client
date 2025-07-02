@@ -141,61 +141,6 @@ const UserSheet = ({ user, onSave }) => {
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* 🔐 Password Modal rendu hors du Sheet */}
-      {isEditMode && window.location.pathname === "/dashboard/users" && (
-        <Dialog
-          open={isPasswordModalOpen}
-          onOpenChange={setIsPasswordModalOpen}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Changer le mot de passe</DialogTitle>
-              <DialogDescription>
-                Saisissez le nouveau mot de passe pour {user.firstName}{" "}
-                {user.lastName}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Nouveau mot de passe</Label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Au moins 6 caractères, 1 majuscule, 1 minuscule, 1 chiffre"
-                />
-              </div>
-              <div>
-                <Label>Confirmer le mot de passe</Label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirmez le mot de passe"
-                />
-              </div>
-              {passwordError && (
-                <div className="text-red-500 text-sm">{passwordError}</div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsPasswordModalOpen(false);
-                  setNewPassword("");
-                  setConfirmPassword("");
-                  setPasswordError("");
-                }}
-              >
-                Annuler
-              </Button>
-              <Button onClick={handlePasswordChange}>Confirmer</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </>
   );
 };

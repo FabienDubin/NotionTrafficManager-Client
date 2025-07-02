@@ -23,12 +23,14 @@ export const useCalendar = () => {
     cache: new Map(),
   });
 
-  const [filters, setFilters] = useState({
+  const defaultFilters = {
     selectedCreatives: [],
     selectedClients: [],
     selectedProjects: [],
-    showCompleted: false,
-  });
+    showCompleted: true,
+  };
+
+  const [filters, setFilters] = useState(defaultFilters);
 
   // Cache avec TTL (5 minutes)
   const cacheManager = useMemo(
@@ -809,7 +811,18 @@ export const useCalendar = () => {
 
       // Appliquer les filtres des préférences
       if (preferencesRes.data?.filterPreferences) {
-        setFilters(preferencesRes.data.filterPreferences);
+        const merged = {
+          ...defaultFilters,
+          ...preferencesRes.data.filterPreferences,
+        };
+
+        if (typeof merged.showCompleted !== "boolean") {
+          merged.showCompleted = true;
+        }
+
+        setFilters(merged);
+        console.log("📦 Filters loaded:", merged);
+        console.log("filters:", merged);
       }
     } catch (error) {
       console.error("❌ Error loading reference data:", error);
