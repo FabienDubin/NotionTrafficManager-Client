@@ -26,61 +26,13 @@ const UserSheet = ({ user, onSave }) => {
   const isEditMode = Boolean(user);
   const [open, setOpen] = useState(false);
 
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  // const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const { toast } = useToast();
 
   const handleClose = () => {
     setOpen(false);
     if (onSave) onSave();
-  };
-
-  const validatePassword = (password) => {
-    const passwordRegex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}/;
-    return passwordRegex.test(password);
-  };
-
-  const handlePasswordChange = async () => {
-    setPasswordError("");
-
-    if (!newPassword || !confirmPassword) {
-      setPasswordError("Veuillez remplir tous les champs");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    if (!validatePassword(newPassword)) {
-      setPasswordError(
-        "Le mot de passe doit contenir au moins 6 caractères, 1 majuscule, 1 minuscule et 1 chiffre"
-      );
-      return;
-    }
-
-    try {
-      await userService.changeUserPassword(user._id, newPassword);
-      toast({
-        title: "Mot de passe modifié",
-        description: `Le mot de passe de ${user.firstName} a été mis à jour avec succès`,
-      });
-
-      setIsPasswordModalOpen(false);
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordError("");
-    } catch (error) {
-      console.error("Error changing password:", error);
-      setPasswordError(
-        error.response?.data?.message ||
-          "Erreur lors du changement de mot de passe"
-      );
-    }
   };
 
   const handleDeleteUser = async () => {
@@ -126,18 +78,6 @@ const UserSheet = ({ user, onSave }) => {
               onClose={handleClose}
               handleDeleteUser={handleDeleteUser}
             />
-            {isEditMode && window.location.pathname === "/dashboard/users" && (
-              <div className="border-t pt-4 mt-4">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setIsPasswordModalOpen(true)}
-                >
-                  <Key className="w-4 h-4 mr-2" />
-                  Change Password
-                </Button>
-              </div>
-            )}
           </div>
         </SheetContent>
       </Sheet>

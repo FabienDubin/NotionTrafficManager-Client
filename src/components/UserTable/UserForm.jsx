@@ -22,28 +22,22 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Pencil, Send, Trash2 } from "lucide-react";
-import { FALLBACK_IMG } from "@/config/envVar.config";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Eye, EyeOff, Pencil, Send, Trash2 } from "lucide-react";
+import { FALLBACK_IMG, DEFAULT_PASS } from "@/config/envVar.config";
 import authService from "@/services/auth.service";
-import { DEFAULT_PASS } from "@/config/envVar.config";
 import { AuthContext } from "@/context/auth.context";
 import { useToast } from "@/hooks/use-toast";
 
 const UserForm = ({ user, onClose, handleDeleteUser }) => {
   const isEditMode = Boolean(user);
   const { toast } = useToast();
-  //CONTEXT
   const { user: authenticatedUser, updateUser } = useContext(AuthContext);
 
-  //STATES
   const [formData, setFormData] = useState(
     user || {
       firstName: "",
@@ -54,22 +48,25 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
       password: DEFAULT_PASS,
     }
   );
+
   const [previewImage, setPreviewImage] = useState(user?.image || FALLBACK_IMG);
   const [imageFile, setImageFile] = useState(null);
 
-  //HANDLERS
-  //Handles the text typed in the form fields
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  //Handles the role selector
   const handleRoleChange = (value) => {
     setFormData((prev) => ({ ...prev, role: value }));
   };
 
-  //Handles the image file input
   const handleImageChange = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -78,7 +75,6 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
     }
   };
 
-  //Handle the password reset action when the button is triggered
   const sendPasswordReset = async () => {
     if (!formData.email) {
       toast({
@@ -88,10 +84,9 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
       });
       return;
     }
-    const email = formData.email;
-    console.log({ email });
+
     try {
-      const response = await authService.forgotPassword({ email });
+      await authService.forgotPassword({ email: formData.email });
       toast({
         title: "Password reset email sent",
         description: "Check your inbox for further instructions",
@@ -101,7 +96,50 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
     }
   };
 
-  //Handle the form submission
+  const validatePassword = (password) => {
+    const passwordRegex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}/;
+    return passwordRegex.test(password);
+  };
+
+  const handlePasswordChange = async () => {
+    setPasswordError("");
+
+    if (!newPassword || !confirmPassword) {
+      setPasswordError("Veuillez remplir tous les champs");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (!validatePassword(newPassword)) {
+      setPasswordError(
+        "Le mot de passe doit contenir au moins 6 caractères, 1 majuscule, 1 minuscule et 1 chiffre"
+      );
+      return;
+    }
+
+    try {
+      await userService.changeUserPassword(user._id, newPassword);
+      toast({
+        title: "Mot de passe modifié",
+        description: `Le mot de passe de ${user.firstName} a été mis à jour avec succès`,
+      });
+
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordError("");
+    } catch (error) {
+      console.error("Error changing password:", error);
+      setPasswordError(
+        error.response?.data?.message ||
+          "Erreur lors du changement de mot de passe"
+      );
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     try {
@@ -119,25 +157,22 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
       if (isEditMode) {
         await userService.updateUser(formData._id, updatedUser);
       } else {
-        console.log(updatedUser);
         const response = await authService.signup(updatedUser);
         updatedUser = response.data;
       }
+
       if (window.location.pathname === "/dashboard/users") {
         onClose();
         toast({
-          title: `${
-            isEditMode
-              ? `${user.firstName}'s profile updated`
-              : "User created successfully!"
-          }`,
-          description: `${
-            isEditMode
-              ? "Everything is under control!"
-              : `${formData.firstName} can now sign in with the default password: ${DEFAULT_PASS}`
-          }`,
+          title: isEditMode
+            ? `${user.firstName}'s profile updated`
+            : "User created successfully!",
+          description: isEditMode
+            ? "Everything is under control!"
+            : `${formData.firstName} can now sign in with the default password: ${DEFAULT_PASS}`,
         });
       }
+
       if (window.location.pathname === "/profile") {
         updateUser(updatedUser);
         toast({
@@ -152,7 +187,6 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
 
   return (
     <form onSubmit={handleSave} className="my-5">
-      {/* No image section in the creation form */}
       {isEditMode && (
         <div className="flex flex-col gap-2">
           <Label>Profile Image</Label>
@@ -208,7 +242,6 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
         />
       </div>
 
-      {/* Only visible in the dashboard users page  */}
       {window.location.pathname === "/dashboard/users" && (
         <div className="mt-4">
           <Label>Role</Label>
@@ -224,9 +257,11 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
           </Select>
         </div>
       )}
-      <div className="w-full flex items-center mt-4">
+
+      <div className="w-full flex flex-col mt-4 gap-2">
+        <Label>Password</Label>
         <Button
-          className="mr-2"
+          className="w-full"
           onClick={(e) => {
             e.preventDefault();
             sendPasswordReset();
@@ -234,14 +269,93 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
           variant="outline"
           disabled={!isEditMode}
         >
-          <Send />
+          <Send className="mr-2 w-4 h-4" />
           Send reset password
         </Button>
+
+        {isEditMode && window.location.pathname === "/dashboard/users" && (
+          <Accordion type="single" collapsible className="w-full mt-4">
+            <AccordionItem value="password">
+              <AccordionTrigger>
+                <span className="text-sm font-medium">
+                  🔐 Définir un mot de passe
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 mt-2">
+                  <div>
+                    <Label>Nouveau mot de passe</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Au moins 6 caractères, 1 majuscule, 1 minuscule, 1 chiffre"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Confirmer le mot de passe</Label>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirmez le mot de passe"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {passwordError && (
+                    <div className="text-red-500 text-sm">{passwordError}</div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={handlePasswordChange}
+                      variant="secondary"
+                    >
+                      Confirmer
+                    </Button>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
       </div>
-      <div className="flex justify-end mt-5 ">
+
+      <div className="flex justify-end mt-5">
         <Button type="submit" className="w-full mr-2">
           {isEditMode ? "Save" : "Create"}
         </Button>
+
         {window.location.pathname === "/dashboard/users" && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
