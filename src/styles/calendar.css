@@ -587,3 +587,28 @@
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Correctif pour éviter le débordement des événements en vue mensuelle */
+.fc-dayGridMonth-view .fc-daygrid-event-harness,
+.fc-dayGridMonth-view .fc-daygrid-event {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box; /* intègre padding/border dans le calcul */
+  overflow: hidden; /* masque tout débordement */
+}
+
+/* Permet le retour à la ligne et coupe proprement le texte long */
+.fc-dayGridMonth-view .fc-event-title,
+.fc-dayGridMonth-view .fc-event-title-custom,
+.fc-dayGridMonth-view .fc-event-client,
+.fc-dayGridMonth-view .fc-event-assignee {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Réduire légèrement le padding horizontal pour plus d'espace */
+.fc-dayGridMonth-view .fc-daygrid-event {
+  @apply px-0.5; /* au lieu de px-1 */
+}

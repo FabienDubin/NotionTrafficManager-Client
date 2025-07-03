@@ -235,25 +235,58 @@ const Calendar = () => {
       const selectedProjectIds = filters.selectedProjects || [];
       const selectedCreativeIds = filters.selectedCreatives || [];
 
-      // Créer une tâche temporaire avec les dates sélectionnées
+      // Variables pour les dates de début et de fin
+      let startDate,
+        startTime,
+        endDate,
+        endTime,
+        workPeriodStart,
+        workPeriodEnd;
+
+      // Traitement spécial pour la vue mois (allDay === true)
+      if (selectInfo.allDay) {
+        // Créer une date à 9h le jour sélectionné
+        const start = new Date(selectInfo.startDate);
+        start.setHours(9, 0, 0, 0);
+
+        // Créer une date à 11h (2h plus tard)
+        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+        // Formater les dates pour le formulaire
+        startDate = start.toISOString().split("T")[0];
+        startTime = "09:00";
+        endDate = start.toISOString().split("T")[0]; // Même jour
+        endTime = "11:00";
+
+        // Dates ISO complètes pour workPeriod
+        workPeriodStart = start.toISOString();
+        workPeriodEnd = end.toISOString();
+      } else {
+        // Vue semaine - comportement inchangé
+        startDate = selectInfo.startDate.split("T")[0];
+        startTime =
+          selectInfo.startDate.split("T")[1]?.substring(0, 5) || "09:00";
+        endDate = selectInfo.endDate.split("T")[0];
+        endTime = selectInfo.endDate.split("T")[1]?.substring(0, 5) || "18:00";
+        workPeriodStart = selectInfo.startDate;
+        workPeriodEnd = selectInfo.endDate;
+      }
+
+      // Créer une tâche temporaire avec les dates calculées
       const baseTask = {
         id: "new", // ID temporaire pour identifier une nouvelle tâche
         name: "",
         projectId: "",
-        startDate: selectInfo.startDate.split("T")[0],
-        startTime: selectInfo.allDay
-          ? "09:00"
-          : selectInfo.startDate.split("T")[1]?.substring(0, 5) || "09:00",
-        endDate: selectInfo.endDate.split("T")[0],
-        endTime: selectInfo.allDay
-          ? "18:00"
-          : selectInfo.endDate.split("T")[1]?.substring(0, 5) || "18:00",
+        startDate: startDate,
+        startTime: startTime,
+        endDate: endDate,
+        endTime: endTime,
         status: "Pas commencé",
         assignedUsers: [],
         notes: "",
         workPeriod: {
-          start: selectInfo.startDate,
-          end: selectInfo.endDate,
+          start: workPeriodStart,
+          end: workPeriodEnd,
         },
         isNew: true, // Flag pour identifier une nouvelle tâche
       };

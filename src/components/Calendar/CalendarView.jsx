@@ -166,8 +166,17 @@ const CalendarView = ({
   }, []); // Exécuter une seule fois au montage
 
   // Fonction pour arrondir à l'heure la plus proche (créneaux de 15 minutes)
+  // Avec garantie que l'heure est >= 9h pour compatibilité vue semaine/mois
   const roundToQuarterHour = (date) => {
     const rounded = new Date(date);
+
+    // Si l'heure est avant 9h, fixer à 9h00
+    if (rounded.getHours() < 9) {
+      rounded.setHours(9, 0, 0, 0);
+      return rounded;
+    }
+
+    // Sinon, arrondir aux 15 minutes comme avant
     const minutes = rounded.getMinutes();
     const remainder = minutes % 15;
 

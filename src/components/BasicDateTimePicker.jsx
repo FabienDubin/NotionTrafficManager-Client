@@ -214,14 +214,14 @@ const BasicDateTimePicker = ({
           )}
         </div>
 
-        {/* <Input
+        <Input
           type="time"
           step="1"
           value={time || "09:00"}
           onChange={(e) => onTimeChange(e.target.value)}
           className="w-24 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
           disabled={disabled || disableTime}
-        /> */}
+        />
       </div>
     </div>
   );
