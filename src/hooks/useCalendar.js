@@ -868,7 +868,7 @@ export const useCalendar = () => {
         // Invalider le cache des tâches pour recharger avec les nouvelles couleurs
         cacheManager.clear();
 
-        toast("Youhou "🥳, {
+        toast("Youhou 🥳", {
           description: "Couleurs sauvegardées",
           variant: "success",
         });
