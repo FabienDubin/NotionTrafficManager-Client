@@ -38,7 +38,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, Building, Save, X, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import BasicDateTimePicker from "@/components/BasicDateTimePicker";
 import BasicCombobox from "@/components/BasicCombobox";
 import BasicMultiSelectCombobox from "@/components/BasicMultiSelectCombobox";
@@ -72,7 +72,6 @@ const TaskEditSheet = ({
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { toast } = useToast();
 
   // Filtrer les projets selon le statut
   const filteredProjects =
@@ -239,19 +238,17 @@ const TaskEditSheet = ({
     // Validation supplémentaire pour les nouvelles tâches
     if (task.isNew || task.id === "new") {
       if (!formData.name.trim()) {
-        toast({
-          title: "Erreur de validation",
+        toast("Erreur de validation", {
           description: "Le nom de la tâche est obligatoire.",
-          variant: "destructive",
+          variant: "error",
         });
         return;
       }
 
       if (!formData.projectId) {
-        toast({
-          title: "Erreur de validation",
+        toast("Erreur de validation", {
           description: "Le projet est obligatoire.",
-          variant: "destructive",
+          variant: "error",
         });
         return;
       }
@@ -260,10 +257,9 @@ const TaskEditSheet = ({
     // Validation des dates avant sauvegarde
     const validation = validateDates();
     if (!validation.isValid) {
-      toast({
-        title: "Erreur de validation",
+      toast("Erreur de validation", {
         description: validation.message,
-        variant: "destructive",
+        variant: "error",
       });
       return; // Garder la sheet ouverte pour permettre la correction
     }
@@ -308,8 +304,7 @@ const TaskEditSheet = ({
     onClose();
 
     // Toast de progression
-    toast({
-      title: "Sauvegarde en cours...",
+    toast("Sauvegarde en cours...", {
       description: "Synchronisation avec Notion",
     });
 
@@ -326,24 +321,15 @@ const TaskEditSheet = ({
 
       // En cas d'erreur, proposer de réouvrir la sheet
       const isNewTask = task.isNew || task.id === "new";
-      toast({
-        title: isNewTask ? "Erreur de création" : "Erreur de sauvegarde",
+      toast(isNewTask ? "Erreur de création" : "Erreur de sauvegarde", {
         description: isNewTask
           ? "Une erreur est survenue lors de la création. Voulez-vous réessayer ?"
           : "Une erreur est survenue lors de la sauvegarde. Voulez-vous réessayer ?",
-        variant: "destructive",
-        action: (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Réouvrir la sheet avec les données du formulaire
-              onOpenChange(true);
-            }}
-          >
-            Réessayer
-          </Button>
-        ),
+        variant: "error",
+        action: {
+          label: "Réessayer",
+          onClick: () => onOpenChange(true),
+        },
       });
     }
   };
@@ -376,10 +362,9 @@ const TaskEditSheet = ({
 
     // Ne pas permettre la suppression des nouvelles tâches
     if (task.isNew || task.id === "new") {
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de supprimer une tâche non sauvegardée.",
-        variant: "destructive",
+        variant: "error",
       });
       return;
     }
@@ -403,10 +388,9 @@ const TaskEditSheet = ({
       setLoading(false);
 
       // Afficher l'erreur sans fermer la sheet
-      toast({
-        title: "Erreur de suppression",
+      toast("Erreur de suppression", {
         description: `Une erreur est survenue lors de la suppression: ${error.message}`,
-        variant: "destructive",
+        variant: "error",
       });
     }
   };

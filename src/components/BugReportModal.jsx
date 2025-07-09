@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // Services
 import bugReportService from "@/services/bugReport.service";
@@ -38,8 +38,6 @@ const BugReportModal = ({ trigger, onSuccess }) => {
     screenshots: [],
   });
   const [errors, setErrors] = useState({});
-  const { toast } = useToast();
-
   // Configuration du drag & drop
   const onDrop = useCallback(
     (acceptedFiles, rejectedFiles) => {
@@ -59,10 +57,9 @@ const BugReportModal = ({ trigger, onSuccess }) => {
           return `${file.file.name}: ${errors.join(", ")}`;
         });
 
-        toast({
-          title: "Fichiers rejetés",
+        toast("Fichiers rejetés", {
           description: rejectedReasons.join("\n"),
-          variant: "destructive",
+          variant: "error",
         });
       }
 
@@ -72,10 +69,9 @@ const BugReportModal = ({ trigger, onSuccess }) => {
           const newScreenshots = [...prev.screenshots, ...acceptedFiles];
           // Limiter à 5 screenshots maximum
           if (newScreenshots.length > 5) {
-            toast({
-              title: "Limite atteinte",
+            toast("Limite atteinte", {
               description: "Maximum 5 screenshots autorisés",
-              variant: "destructive",
+              variant: "error",
             });
             return { ...prev, screenshots: newScreenshots.slice(0, 5) };
           }
@@ -144,10 +140,10 @@ const BugReportModal = ({ trigger, onSuccess }) => {
         userAgent: navigator.userAgent,
       });
 
-      toast({
-        title: "Bug signalé avec succès",
+      toast("Bug signalé avec succès", {
         description:
           "Votre rapport de bug a été envoyé. Merci pour votre contribution !",
+        variant: "success",
       });
 
       // Reset du formulaire
@@ -166,10 +162,9 @@ const BugReportModal = ({ trigger, onSuccess }) => {
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi du bug report:", error);
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: error.message || "Impossible d'envoyer le rapport de bug",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setIsSubmitting(false);

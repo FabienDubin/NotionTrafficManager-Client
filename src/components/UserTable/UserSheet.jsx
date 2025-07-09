@@ -20,15 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoreHorizontal, Trash2, UserRoundPlus, Key } from "lucide-react";
 import UserForm from "./UserForm";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const UserSheet = ({ user, onSave }) => {
   const isEditMode = Boolean(user);
   const [open, setOpen] = useState(false);
 
   // const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-
-  const { toast } = useToast();
 
   const handleClose = () => {
     setOpen(false);
@@ -38,17 +36,16 @@ const UserSheet = ({ user, onSave }) => {
   const handleDeleteUser = async () => {
     try {
       await userService.deleteUser(user._id);
-      toast({
-        title: "Bye bye 👋",
+      toast("Bye bye 👋", {
         description: `${user.firstName} has been deleted`,
+        variant: "success",
       });
       setOpen(false);
       onSave();
     } catch (error) {
       console.log(error);
-      toast({
-        title: "Oups, we've got a problem",
-        description: "",
+      toast("Oups, we've got a problem", {
+        variant: "error",
       });
     }
   };

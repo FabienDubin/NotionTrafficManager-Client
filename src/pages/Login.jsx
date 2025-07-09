@@ -65,18 +65,6 @@ const Login = () => {
     };
   }, [email, password]);
 
-  //TO BE DELETE
-  useEffect(() => {
-    console.log(
-      "🔎 import.meta.env.VITE_API_URL =",
-      import.meta.env.VITE_API_URL
-    );
-    console.log(
-      "🔎 import.meta.env.VITE_API_URL =",
-      import.meta.env.VITE_API_URL
-    );
-  }, []);
-
   return (
     <div>
       <div className="flex flex-col justify-center items-center md:block md:relative ">

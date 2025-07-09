@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // Services
 import bugReportService, {
@@ -75,7 +75,6 @@ const BugReportsDashboard = () => {
     limit: 20,
   });
   const [pagination, setPagination] = useState({});
-  const { toast } = useToast();
 
   // Chargement des données
   useEffect(() => {
@@ -91,10 +90,9 @@ const BugReportsDashboard = () => {
       setPagination(response.pagination);
     } catch (error) {
       console.error("Erreur lors du chargement des bug reports:", error);
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de charger les bug reports",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setLoading(false);
@@ -137,10 +135,9 @@ const BugReportsDashboard = () => {
       setSelectedBugReport(response.data);
       setIsDetailModalOpen(true);
     } catch (error) {
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de charger les détails du bug report",
-        variant: "destructive",
+        variant: "error",
       });
     }
   };
@@ -163,17 +160,16 @@ const BugReportsDashboard = () => {
         selectedBugReport._id,
         editFormData
       );
-      toast({
-        title: "Succès",
+      toast("Succès", {
         description: "Bug report mis à jour avec succès",
+        variant: "success",
       });
       setIsEditModalOpen(false);
       loadBugReports();
     } catch (error) {
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de mettre à jour le bug report",
-        variant: "destructive",
+        variant: "error",
       });
     }
   };
@@ -186,16 +182,15 @@ const BugReportsDashboard = () => {
 
     try {
       await bugReportService.deleteBugReport(id);
-      toast({
-        title: "Succès",
+      toast("Succès", {
         description: "Bug report supprimé avec succès",
+        variant: "success",
       });
       loadBugReports();
     } catch (error) {
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de supprimer le bug report",
-        variant: "destructive",
+        variant: "error",
       });
     }
   };

@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { debounce, throttle } from "lodash";
 import calendarService from "../services/calendar.service";
-import { useToast } from "./use-toast";
+import { toast } from "sonner";
 
 export const useCalendar = () => {
-  const { toast } = useToast();
   const abortController = useRef(null);
 
   const [state, setState] = useState({
@@ -107,10 +106,9 @@ export const useCalendar = () => {
             error: error.message,
           }));
 
-          toast({
-            title: "Erreur",
+          toast("🚨 Erreur", {
             description: "Impossible de charger les tâches",
-            variant: "destructive",
+            variant: "error",
           });
         }
       }
@@ -135,10 +133,9 @@ export const useCalendar = () => {
       setState((prev) => ({ ...prev, unassignedTasks }));
     } catch (error) {
       console.error("❌ Error loading unassigned tasks:", error);
-      toast({
-        title: "Erreur",
+      toast("🚨 Erreur", {
         description: "Impossible de charger les tâches non assignées",
-        variant: "destructive",
+        variant: "error",
       });
     }
   }, [toast]);
@@ -171,9 +168,9 @@ export const useCalendar = () => {
         // Désactiver l'indicateur de mise à jour
         setState((prev) => ({ ...prev, updating: false }));
 
-        toast({
-          title: "Succès",
+        toast("Succès", {
           description: "Nouvelle tâche créée avec succès",
+          variant: "success",
         });
 
         return newTask;
@@ -189,10 +186,9 @@ export const useCalendar = () => {
         // Désactiver l'indicateur de mise à jour en cas d'erreur
         setState((prev) => ({ ...prev, updating: false }));
 
-        toast({
-          title: "Erreur",
+        toast("🚨 Erreur", {
           description: `Impossible de créer la tâche: ${error.message}`,
-          variant: "destructive",
+          variant: "error",
         });
 
         throw error;
@@ -206,7 +202,7 @@ export const useCalendar = () => {
     async (taskData, calendarUpdateFn, options = {}) => {
       console.log("🔄 Starting optimistic task creation:", taskData);
 
-      const { showSuccessToast = true, showProgressToast = false } = options;
+      const { showSuccessToast = true, showProgressToast = true } = options;
 
       // Générer un ID temporaire pour la nouvelle tâche
       const tempId = `temp-${Date.now()}`;
@@ -215,9 +211,8 @@ export const useCalendar = () => {
 
       // Toast de progression si demandé
       if (showProgressToast) {
-        toast({
-          title: "Création en cours...",
-          description: "Synchronisation avec Notion",
+        toast("Création en cours...", {
+          description: "📡 Synchronisation avec Notion",
         });
       }
 
@@ -350,7 +345,7 @@ export const useCalendar = () => {
         if (showSuccessToast) {
           toast({
             title: "Succès",
-            description: "Nouvelle tâche créée avec succès",
+            description: "Nouvelle tâche créée avec succès 😎",
           });
         }
 
@@ -373,10 +368,9 @@ export const useCalendar = () => {
           }
         }
 
-        toast({
-          title: "Erreur de création",
+        toast("Erreur de création", {
           description: `Impossible de créer la tâche: ${error.message}`,
-          variant: "destructive",
+          variant: "error",
         });
 
         throw error;
@@ -397,7 +391,7 @@ export const useCalendar = () => {
     async (taskId, updates, calendarUpdateFn, options = {}) => {
       console.log("🔄 Starting optimistic task update:", { taskId, updates });
 
-      const { showSuccessToast = true, showProgressToast = false } = options;
+      const { showSuccessToast = true, showProgressToast = true } = options;
 
       // Sauvegarder l'état original pour le rollback
       let originalTask = null;
@@ -405,9 +399,8 @@ export const useCalendar = () => {
 
       // Toast de progression si demandé
       if (showProgressToast) {
-        toast({
-          title: "Sauvegarde en cours...",
-          description: "Synchronisation avec Notion",
+        toast("Sauvegarde en cours...", {
+          description: "📡 Synchronisation avec Notion",
         });
       }
 
@@ -656,9 +649,9 @@ export const useCalendar = () => {
         });
 
         if (showSuccessToast) {
-          toast({
-            title: "Succès",
-            description: "Tâche sauvegardée avec succès",
+          toast("Succès", {
+            description: "Tâche sauvegardée avec succès 🥳",
+            variant: "success",
           });
         }
 
@@ -688,10 +681,9 @@ export const useCalendar = () => {
           }
         }
 
-        toast({
-          title: "Erreur de sauvegarde",
+        toast("🚨 Erreur de sauvegarde", {
           description: `Impossible de sauvegarder: ${error.message}`,
-          variant: "destructive",
+          variant: "error",
         });
 
         throw error;
@@ -712,9 +704,8 @@ export const useCalendar = () => {
 
       // Toast de progression si demandé
       if (showProgressToast) {
-        toast({
-          title: "Suppression en cours...",
-          description: "Synchronisation avec Notion",
+        toast("Suppression en cours...", {
+          description: "📡 Synchronisation avec Notion",
         });
       }
 
@@ -745,9 +736,9 @@ export const useCalendar = () => {
         console.log("🗑️ Cache cleared after task deletion");
 
         if (showSuccessToast) {
-          toast({
-            title: "Succès",
+          toast("Succès", {
             description: "Tâche supprimée avec succès",
+            variant: "success",
           });
         }
 
@@ -757,10 +748,9 @@ export const useCalendar = () => {
         console.error("❌ Error deleting task:", error);
 
         // Pas de rollback nécessaire car pas de suppression optimiste
-        toast({
-          title: "Erreur de suppression",
+        toast("🚨 Erreur de suppression", {
           description: `Impossible de supprimer la tâche: ${error.message}`,
-          variant: "destructive",
+          variant: "error",
         });
 
         throw error;
@@ -831,10 +821,9 @@ export const useCalendar = () => {
         initialLoading: false,
         error: error.message,
       }));
-      toast({
-        title: "Erreur",
+      toast("🚨 Erreur", {
         description: "Impossible de charger les données de référence",
-        variant: "destructive",
+        variant: "error",
       });
     }
   }, [toast]);
@@ -850,16 +839,15 @@ export const useCalendar = () => {
           preferences: response.data,
         }));
 
-        toast({
-          title: "Succès",
+        toast("Youhou 🥳", {
           description: "Préférences sauvegardées",
+          variant: "success",
         });
       } catch (error) {
         console.error("Error saving preferences:", error);
-        toast({
-          title: "Erreur",
+        toast("🚨 Erreur", {
           description: "Impossible de sauvegarder les préférences",
-          variant: "destructive",
+          variant: "error",
         });
       }
     },
@@ -880,16 +868,15 @@ export const useCalendar = () => {
         // Invalider le cache des tâches pour recharger avec les nouvelles couleurs
         cacheManager.clear();
 
-        toast({
-          title: "Succès",
+        toast("Youhou "🥳, {
           description: "Couleurs sauvegardées",
+          variant: "success",
         });
       } catch (error) {
         console.error("Error saving client colors:", error);
-        toast({
-          title: "Erreur",
+        toast("🚨 Erreur", {
           description: "Impossible de sauvegarder les couleurs",
-          variant: "destructive",
+          variant: "error",
         });
       }
     },

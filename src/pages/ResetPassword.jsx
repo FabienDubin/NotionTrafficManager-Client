@@ -18,7 +18,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { AuthContext } from "@/context/auth.context";
 
 const ResetPassword = () => {
@@ -33,9 +33,6 @@ const ResetPassword = () => {
   const { token } = useParams();
   const nav = useNavigate();
 
-  //TOAST
-  const { toast } = useToast();
-
   //HANDLERS
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,15 +40,15 @@ const ResetPassword = () => {
     try {
       const response = await authService.resetPassword(token, { password });
       if (isLoggedIn) {
-        toast({
-          title: "Password updated",
+        toast("Password updated", {
           description: "Redirecting to profile page",
+          variant: "success",
         });
         nav("/profile");
       } else {
-        toast({
-          title: "Password updated",
+        toast("Password updated", {
           description: "Redirecting to login page",
+          variant: "success",
         });
         nav("/login");
       }

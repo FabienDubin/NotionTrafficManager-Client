@@ -31,11 +31,10 @@ import { Eye, EyeOff, Pencil, Send, Trash2 } from "lucide-react";
 import { FALLBACK_IMG, DEFAULT_PASS } from "@/config/envVar.config";
 import authService from "@/services/auth.service";
 import { AuthContext } from "@/context/auth.context";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const UserForm = ({ user, onClose, handleDeleteUser }) => {
   const isEditMode = Boolean(user);
-  const { toast } = useToast();
   const { user: authenticatedUser, updateUser } = useContext(AuthContext);
 
   const [formData, setFormData] = useState(
@@ -77,19 +76,18 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
 
   const sendPasswordReset = async () => {
     if (!formData.email) {
-      toast({
-        title: "Email is required",
+      toast("Email is required", {
         description: "Please enter your email address",
-        status: "error",
+        variant: "error",
       });
       return;
     }
 
     try {
       await authService.forgotPassword({ email: formData.email });
-      toast({
-        title: "Password reset email sent",
+      toast("Password reset email sent", {
         description: "Check your inbox for further instructions",
+        variant: "success",
       });
     } catch (error) {
       console.log(error);
@@ -123,9 +121,9 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
 
     try {
       await userService.changeUserPassword(user._id, newPassword);
-      toast({
-        title: "Mot de passe modifié",
+      toast("Mot de passe modifié", {
         description: `Le mot de passe de ${user.firstName} a été mis à jour avec succès`,
+        variant: "success",
       });
 
       setNewPassword("");
@@ -163,21 +161,24 @@ const UserForm = ({ user, onClose, handleDeleteUser }) => {
 
       if (window.location.pathname === "/dashboard/users") {
         onClose();
-        toast({
-          title: isEditMode
+        toast(
+          isEditMode
             ? `${user.firstName}'s profile updated`
             : "User created successfully!",
-          description: isEditMode
-            ? "Everything is under control!"
-            : `${formData.firstName} can now sign in with the default password: ${DEFAULT_PASS}`,
-        });
+          {
+            description: isEditMode
+              ? "Everything is under control!"
+              : `${formData.firstName} can now sign in with the default password: ${DEFAULT_PASS}`,
+            variant: "success",
+          }
+        );
       }
 
       if (window.location.pathname === "/profile") {
         updateUser(updatedUser);
-        toast({
-          title: "Your profile has been updated!",
+        toast("Your profile has been updated!", {
           description: "Everything is under control!",
+          variant: "success",
         });
       }
     } catch (error) {

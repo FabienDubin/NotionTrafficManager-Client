@@ -18,13 +18,12 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { useToast } from "../../hooks/use-toast";
+import { toast } from "sonner";
 import settingsService from "../../services/settings.service";
 import IsAdmin from "../../components/IsAdmin";
 import NotionDatabaseInput from "../../components/NotionDatabaseInput";
 
 const SettingsDashboard = () => {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [configStatus, setConfigStatus] = useState(null);
@@ -68,10 +67,9 @@ const SettingsDashboard = () => {
       }
     } catch (error) {
       console.error("Error loading config data:", error);
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Impossible de charger les données de configuration",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setLoading(false);
@@ -104,11 +102,10 @@ const SettingsDashboard = () => {
       !formData.databaseIds.projects ||
       !formData.databaseIds.trafic
     ) {
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description:
           "Veuillez remplir tous les champs avant de tester la connexion",
-        variant: "destructive",
+        variant: "error",
       });
       return;
     }
@@ -118,22 +115,20 @@ const SettingsDashboard = () => {
       const result = await settingsService.testNotionConnection(formData);
 
       if (result.success) {
-        toast({
-          title: "Connexion réussie",
+        toast("Connexion réussie", {
           description: result.message,
+          variant: "success",
         });
       } else {
-        toast({
-          title: "Échec de la connexion",
+        toast("Échec de la connexion", {
           description: result.message,
-          variant: "destructive",
+          variant: "error",
         });
       }
     } catch (error) {
-      toast({
-        title: "Erreur de test",
+      toast("Erreur de test", {
         description: "Impossible de tester la connexion Notion",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setTesting(false);
@@ -148,10 +143,9 @@ const SettingsDashboard = () => {
       !formData.databaseIds.projects ||
       !formData.databaseIds.trafic
     ) {
-      toast({
-        title: "Erreur",
+      toast("Erreur", {
         description: "Veuillez remplir tous les champs",
-        variant: "destructive",
+        variant: "error",
       });
       return;
     }
@@ -166,9 +160,9 @@ const SettingsDashboard = () => {
         result = await settingsService.saveNotionConfig(formData);
       }
 
-      toast({
-        title: "Configuration sauvegardée",
+      toast("Configuration sauvegardée", {
         description: result.message,
+        variant: "success",
       });
 
       // Recharger les données
@@ -180,12 +174,11 @@ const SettingsDashboard = () => {
         notionApiKey: "",
       }));
     } catch (error) {
-      toast({
-        title: "Erreur de sauvegarde",
+      toast("Erreur de sauvegarde", {
         description:
           error.response?.data?.message ||
           "Impossible de sauvegarder la configuration",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setLoading(false);

@@ -6,8 +6,9 @@ import TaskEditSheet from "../components/Calendar/TaskEditSheet";
 import ConfigurationModal from "../components/Calendar/ConfigurationModal";
 import ProjectSelectionModal from "../components/Calendar/ProjectSelectionModal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import calendarService from "../services/calendar.service";
+import Loading from "@/components/Loading";
 
 const Calendar = () => {
   const {
@@ -50,8 +51,6 @@ const Calendar = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [pendingTaskData, setPendingTaskData] = useState(null);
   const [filteredProjectsForModal, setFilteredProjectsForModal] = useState([]);
-
-  const { toast } = useToast();
 
   // Gestionnaire pour l'ouverture du sheet d'édition
   const handleTaskClick = useCallback((task) => {
@@ -136,9 +135,9 @@ const Calendar = () => {
             })
             .join(", ");
 
-          toast({
-            title: "Assignation automatique",
+          toast("Assignation automatique", {
             description: `Tâche assignée automatiquement à ${creativeNames}`,
+            variant: "success",
           });
         }
 
@@ -450,33 +449,34 @@ const Calendar = () => {
   // Affichage du skeleton pendant le chargement initial
   if (initialLoading) {
     return (
-      <div className="flex h-screen bg-background">
-        {/* Sidebar skeleton */}
-        <div className="w-80 border-r bg-background p-6 space-y-6">
-          <Skeleton className="h-8 w-32" />
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <Skeleton className="h-8 w-48" />
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </div>
-        </div>
+      // <div className="flex h-screen bg-background">
+      //   {/* Sidebar skeleton */}
+      //   <div className="w-80 border-r bg-background p-6 space-y-6">
+      //     <Skeleton className="h-8 w-32" />
+      //     <div className="space-y-4">
+      //       <Skeleton className="h-10 w-full" />
+      //       <Skeleton className="h-10 w-full" />
+      //       <Skeleton className="h-10 w-full" />
+      //     </div>
+      //     <Skeleton className="h-8 w-48" />
+      //     <div className="space-y-2">
+      //       {Array.from({ length: 5 }).map((_, i) => (
+      //         <Skeleton key={i} className="h-16 w-full" />
+      //       ))}
+      //     </div>
+      //   </div>
 
-        {/* Calendar skeleton */}
-        <div className="flex-1 p-6">
-          <Skeleton className="h-8 w-48 mb-4" />
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 35 }).map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-        </div>
-      </div>
+      //   {/* Calendar skeleton */}
+      //   <div className="flex-1 p-6">
+      //     <Skeleton className="h-8 w-48 mb-4" />
+      //     <div className="grid grid-cols-7 gap-2">
+      //       {Array.from({ length: 35 }).map((_, i) => (
+      //         <Skeleton key={i} className="h-24" />
+      //       ))}
+      //     </div>
+      //   </div>
+      // </div>
+      <Loading />
     );
   }
 
