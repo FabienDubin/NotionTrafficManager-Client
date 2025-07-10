@@ -439,6 +439,7 @@ const TaskEditSheet = ({
                     : "Nom de la tâche")}
               </span>
             )}
+            <span className="text-red-500">*</span>
           </SheetTitle>
         </SheetHeader>
 
@@ -447,7 +448,9 @@ const TaskEditSheet = ({
           <div className="space-y-4">
             {/* Projet */}
             <div>
-              <Label>Projet</Label>
+              <Label>
+                Projet<span className="text-red-500">*</span>
+              </Label>
               {isEditingProject ? (
                 <BasicCombobox
                   options={filteredProjects}
