@@ -343,8 +343,7 @@ export const useCalendar = () => {
         cacheManager.clear();
 
         if (showSuccessToast) {
-          toast({
-            title: "Succès",
+          toast("Succès", {
             description: "Nouvelle tâche créée avec succès 😎",
           });
         }
