@@ -9,13 +9,24 @@ class CalendarService {
       withCredentials: true,
     });
 
-    // Automatically set JWT token on the request headers for every request
+    // Automatically set JWT token and Notion config ID on the request headers for every request
     this.api.interceptors.request.use((config) => {
       // Retrieve the JWT token from the local storage
       const storedToken = localStorage.getItem("authToken");
-
       if (storedToken) {
-        config.headers = { Authorization: `Bearer ${storedToken}` };
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${storedToken}`,
+        };
+      }
+
+      // Ajouter l'ID de la config Notion sélectionnée (multi-config)
+      const notionConfigId = localStorage.getItem("selectedNotionConfigId");
+      if (notionConfigId) {
+        config.headers = {
+          ...config.headers,
+          "x-notion-config-id": notionConfigId,
+        };
       }
 
       return config;
