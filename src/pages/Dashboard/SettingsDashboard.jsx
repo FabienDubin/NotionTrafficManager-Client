@@ -41,6 +41,7 @@ const SettingsDashboard = () => {
       clients: "",
       projects: "",
       trafic: "",
+      teams: "", // Ajout du champ équipes
     },
   });
   const [editMode, setEditMode] = useState(false); // true = édition, false = création
@@ -104,11 +105,13 @@ const SettingsDashboard = () => {
 
   const testConnection = async () => {
     if (
+      !formData.name ||
       !formData.notionApiKey ||
       !formData.databaseIds.users ||
       !formData.databaseIds.clients ||
       !formData.databaseIds.projects ||
-      !formData.databaseIds.trafic
+      !formData.databaseIds.trafic ||
+      !formData.databaseIds.teams
     ) {
       toast("Erreur", {
         description:
@@ -202,8 +205,8 @@ const SettingsDashboard = () => {
   }
 
   return (
-    <div className="w-full min-h-screen p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full h-screen overflow-y-auto p-6">
+      <div className="max-w-4xl mx-auto space-y-6 pb-8">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Settings className="h-8 w-8" />
@@ -295,15 +298,26 @@ const SettingsDashboard = () => {
                           onClick={async () => {
                             try {
                               setLoading(true);
+
+                              // Activer la configuration
                               await settingsService.activateNotionConfig(
                                 config._id
                               );
+
+                              // Forcer la réinitialisation de la configuration Notion
+                              console.log(
+                                "🔄 Forcing Notion config reset after activation..."
+                              );
+                              await settingsService.resetNotionConfig();
+
                               toast("Configuration activée", {
-                                description: `La configuration "${config.name}" est maintenant active.`,
+                                description: `La configuration "${config.name}" est maintenant active et rechargée.`,
                                 variant: "success",
                               });
+
                               await loadAllConfigs();
                             } catch (error) {
+                              console.error("Error activating config:", error);
                               toast("Erreur", {
                                 description:
                                   "Impossible d'activer la configuration",
@@ -330,6 +344,7 @@ const SettingsDashboard = () => {
                                 clients: config.databaseIds?.clients || "",
                                 projects: config.databaseIds?.projects || "",
                                 trafic: config.databaseIds?.trafic || "",
+                                teams: config.databaseIds?.teams || "",
                               },
                             });
                           }}
@@ -480,6 +495,16 @@ const SettingsDashboard = () => {
                 />
 
                 <NotionDatabaseInput
+                  id="teamsDb"
+                  label="Base de données Équipes"
+                  placeholder="URL ou ID de la base équipes"
+                  value={formData.databaseIds.teams}
+                  onChange={(value) =>
+                    handleInputChange("databaseIds.teams", value)
+                  }
+                />
+
+                <NotionDatabaseInput
                   id="clientsDb"
                   label="Base de données Clients"
                   placeholder="URL ou ID de la base clients"
@@ -538,7 +563,8 @@ const SettingsDashboard = () => {
                       !formData.databaseIds.users ||
                       !formData.databaseIds.clients ||
                       !formData.databaseIds.projects ||
-                      !formData.databaseIds.trafic
+                      !formData.databaseIds.trafic ||
+                      !formData.databaseIds.teams
                     ) {
                       toast("Erreur", {
                         description: "Veuillez remplir tous les champs",
@@ -572,6 +598,7 @@ const SettingsDashboard = () => {
                           clients: "",
                           projects: "",
                           trafic: "",
+                          teams: "",
                         },
                       });
                       setEditMode(false);
@@ -615,6 +642,7 @@ const SettingsDashboard = () => {
                           clients: "",
                           projects: "",
                           trafic: "",
+                          teams: "",
                         },
                       });
                     }}

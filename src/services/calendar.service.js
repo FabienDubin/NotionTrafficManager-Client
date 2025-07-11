@@ -137,6 +137,17 @@ class CalendarService {
     }
   }
 
+  // Récupérer les équipes
+  async getTeams() {
+    try {
+      const response = await this.api.get("/teams");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      throw this.handleError(error);
+    }
+  }
+
   // Récupérer les préférences utilisateur
   async getUserPreferences() {
     try {

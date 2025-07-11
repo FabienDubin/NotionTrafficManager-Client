@@ -18,6 +18,7 @@ const Calendar = () => {
     clients,
     projects,
     statusOptions,
+    teams,
     preferences,
     clientColors,
     loading,
@@ -509,6 +510,7 @@ const Calendar = () => {
         clients={clients}
         projects={projects}
         statusOptions={statusOptions}
+        teams={teams}
         filters={filters}
         onFiltersChange={setFilters}
         onConfigClick={() => setIsConfigModalOpen(true)}

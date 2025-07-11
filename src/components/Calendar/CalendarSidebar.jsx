@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,10 @@ import {
   ChevronDown,
   SquareUserRound,
   CalendarCheck,
+  Clapperboard,
+  Palette,
+  Pencil,
+  Users,
 } from "lucide-react";
 import BasicMultiSelectCombobox from "@/components/BasicMultiSelectCombobox";
 import TaskCard from "./TaskCard";
@@ -30,6 +34,7 @@ const CalendarSidebar = ({
   clients,
   projects,
   statusOptions,
+  teams,
   filters,
   onFiltersChange,
   onConfigClick,
@@ -104,6 +109,37 @@ const CalendarSidebar = ({
     );
   }, [projects]);
 
+  // Filtrer les utilisateurs par équipe sélectionnée
+  const filteredUsers = useMemo(() => {
+    if (!filters.selectedTeams?.length) {
+      return users; // Aucune équipe sélectionnée = tous les utilisateurs
+    }
+
+    return users.filter((user) => {
+      const userTeamIds = user.team || [];
+      return filters.selectedTeams.some((teamName) => {
+        const team = teams.find((t) => t.name === teamName);
+        return team && userTeamIds.includes(team.id);
+      });
+    });
+  }, [users, filters.selectedTeams, teams]);
+
+  // Nettoyer les créatifs sélectionnés qui ne font plus partie des équipes filtrées
+  useEffect(() => {
+    if (
+      filters.selectedTeams?.length > 0 &&
+      filters.selectedCreatives?.length > 0
+    ) {
+      const validCreatives = filters.selectedCreatives.filter((creativeId) =>
+        filteredUsers.some((user) => user.id === creativeId)
+      );
+
+      if (validCreatives.length !== filters.selectedCreatives.length) {
+        handleFilterChange("selectedCreatives", validCreatives);
+      }
+    }
+  }, [filters.selectedTeams, filteredUsers, filters.selectedCreatives]);
+
   const handleFilterChange = (filterType, value) => {
     onFiltersChange((prev) => ({
       ...prev,
@@ -115,12 +151,71 @@ const CalendarSidebar = ({
     <div className="w-80 border-r bg-background flex flex-col h-screen">
       {/* Filtres - Section compacte */}
       <div className="p-4 border-b space-y-4 flex-shrink-0">
+        {/* Filtres Équipe */}
+        <div className="flex items-center gap-2 font-medium text-muted-foreground mb-2">
+          <Users className="h-4 w-4" />
+          Équipes
+        </div>
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant={
+              filters.selectedTeams?.includes("Prod") ? "default" : "outline"
+            }
+            size="sm"
+            onClick={() => {
+              const current = filters.selectedTeams || [];
+              const next = current.includes("Prod")
+                ? current.filter((t) => t !== "Prod")
+                : [...current, "Prod"];
+              handleFilterChange("selectedTeams", next);
+            }}
+            className="flex items-center"
+            type="button"
+          >
+            <Clapperboard className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={
+              filters.selectedTeams?.includes("Créa") ? "default" : "outline"
+            }
+            size="sm"
+            onClick={() => {
+              const current = filters.selectedTeams || [];
+              const next = current.includes("Créa")
+                ? current.filter((t) => t !== "Créa")
+                : [...current, "Créa"];
+              handleFilterChange("selectedTeams", next);
+            }}
+            className="flex items-center"
+            type="button"
+          >
+            <Palette className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={
+              filters.selectedTeams?.includes("Édito") ? "default" : "outline"
+            }
+            size="sm"
+            onClick={() => {
+              const current = filters.selectedTeams || [];
+              const next = current.includes("Édito")
+                ? current.filter((t) => t !== "Édito")
+                : [...current, "Édito"];
+              handleFilterChange("selectedTeams", next);
+            }}
+            className="flex items-center"
+            type="button"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+        {/* Filtres Personnes */}
         <div className="flex items-center gap-2 font-medium text-muted-foreground">
           <SquareUserRound className="h-4 w-4" />
           Personnes
         </div>
         <BasicMultiSelectCombobox
-          options={users}
+          options={filteredUsers}
           value={filters.selectedCreatives || []}
           onValueChange={(value) =>
             handleFilterChange("selectedCreatives", value)

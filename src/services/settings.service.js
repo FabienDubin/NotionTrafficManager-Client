@@ -148,6 +148,17 @@ class SettingsService {
     }
   }
 
+  // Réinitialiser la configuration Notion (forcer le rechargement)
+  async resetNotionConfig() {
+    try {
+      const response = await this.api.post("/reset-notion-config");
+      return response.data;
+    } catch (error) {
+      console.error("Error resetting Notion config:", error);
+      throw this.handleError(error);
+    }
+  }
+
   // Gestion des erreurs
   handleError(error) {
     if (error.response) {

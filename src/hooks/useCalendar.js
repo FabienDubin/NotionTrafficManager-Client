@@ -13,6 +13,7 @@ export const useCalendar = () => {
     clients: [],
     projects: [],
     statusOptions: [],
+    teams: [], // Ajout des équipes
     preferences: null,
     clientColors: [],
     loading: false,
@@ -26,10 +27,14 @@ export const useCalendar = () => {
     selectedCreatives: [],
     selectedClients: [],
     selectedProjects: [],
+    selectedTeams: [], // Ajout du filtre équipe
     showCompleted: true,
   };
 
   const [filters, setFilters] = useState(defaultFilters);
+
+  // Ajout : pour accès facile aux équipes sélectionnées
+  const selectedTeams = filters.selectedTeams || [];
 
   // Cache avec TTL (5 minutes)
   const cacheManager = useMemo(
@@ -767,6 +772,7 @@ export const useCalendar = () => {
         clientsRes,
         projectsRes,
         statusRes,
+        teamsRes,
         preferencesRes,
         colorsRes,
       ] = await Promise.all([
@@ -774,6 +780,7 @@ export const useCalendar = () => {
         calendarService.getClients(),
         calendarService.getProjects(),
         calendarService.getStatusOptions(),
+        calendarService.getTeams(),
         calendarService.getUserPreferences(),
         calendarService.getClientColors(),
       ]);
@@ -783,6 +790,7 @@ export const useCalendar = () => {
         clients: clientsRes.data?.length,
         projects: projectsRes.data?.length,
         statusOptions: statusRes.data?.length,
+        teams: teamsRes.data?.length,
         preferences: !!preferencesRes.data,
         clientColors: colorsRes.data?.length,
       });
@@ -793,6 +801,7 @@ export const useCalendar = () => {
         clients: clientsRes.data || [],
         projects: projectsRes.data || [],
         statusOptions: statusRes.data || [],
+        teams: teamsRes.data || [],
         preferences: preferencesRes.data,
         clientColors: colorsRes.data || [],
         initialLoading: false,
@@ -885,20 +894,42 @@ export const useCalendar = () => {
   // Filtrer les tâches
   const filteredTasks = useMemo(() => {
     return state.tasks.filter((task) => {
-      // Filtre par créatifs (utilise maintenant les IDs)
-      if (filters.selectedCreatives.length > 0) {
-        const taskUserIds = Array.isArray(task.assignedUsers)
-          ? task.assignedUsers
-          : [task.assignedUsers].filter(Boolean);
+      const taskUserIds = Array.isArray(task.assignedUsers)
+        ? task.assignedUsers
+        : [task.assignedUsers].filter(Boolean);
 
+      // 1. Filtre par équipes (intersection logique ET avec filtre personnes si activé)
+      if (selectedTeams.length > 0) {
+        // Trouver les users de la tâche
+        const taskUsers = state.users.filter((user) =>
+          taskUserIds.includes(user.id)
+        );
+
+        // Vérifier si au moins un user appartient à une équipe sélectionnée
+        const hasUserFromSelectedTeams = taskUsers.some((user) => {
+          // Récupérer les IDs d'équipe de l'utilisateur (user.team est un tableau d'IDs)
+          const userTeamIds = user.team || [];
+
+          // Vérifier si l'une des équipes sélectionnées correspond
+          return selectedTeams.some((teamName) => {
+            // Trouver l'ID de l'équipe correspondant au nom
+            const team = state.teams.find((t) => t.name === teamName);
+            return team && userTeamIds.includes(team.id);
+          });
+        });
+
+        if (!hasUserFromSelectedTeams) return false;
+      }
+
+      // 2. Filtre par créatifs (indépendant)
+      if (filters.selectedCreatives.length > 0) {
         const hasMatchingCreative = taskUserIds.some((userId) =>
           filters.selectedCreatives.includes(userId)
         );
-
         if (!hasMatchingCreative) return false;
       }
 
-      // Filtre par clients (utilise maintenant les IDs)
+      // 3. Filtre par clients (utilise maintenant les IDs)
       if (filters.selectedClients.length > 0) {
         // Trouver l'ID du client de la tâche
         const taskClientName = Array.isArray(task.client)
@@ -914,7 +945,7 @@ export const useCalendar = () => {
         }
       }
 
-      // Filtre par projets (utilise maintenant les IDs)
+      // 4. Filtre par projets (utilise maintenant les IDs)
       if (filters.selectedProjects.length > 0) {
         const taskProjectIds = Array.isArray(task.project)
           ? task.project
@@ -927,7 +958,7 @@ export const useCalendar = () => {
         if (!hasMatchingProject) return false;
       }
 
-      // Filtre tâches terminées
+      // 5. Filtre tâches terminées
       if (!filters.showCompleted) {
         const completedStatuses = ["Terminé", "Completed", "Done", "Fini"];
         if (completedStatuses.includes(task.status)) return false;
@@ -935,7 +966,14 @@ export const useCalendar = () => {
 
       return true;
     });
-  }, [state.tasks, filters, state.clients]);
+  }, [
+    state.tasks,
+    filters,
+    state.clients,
+    state.users,
+    state.teams,
+    selectedTeams,
+  ]);
 
   // Charger les données initiales
   useEffect(() => {
@@ -1039,6 +1077,7 @@ export const useCalendar = () => {
     clients: state.clients,
     projects: state.projects,
     statusOptions: state.statusOptions,
+    teams: state.teams,
     preferences: state.preferences,
     clientColors: state.clientColors,
     loading: state.loading,
