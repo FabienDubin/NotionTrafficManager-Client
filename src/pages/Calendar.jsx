@@ -41,6 +41,8 @@ const Calendar = () => {
     addTaskToCalendar,
     removeTaskFromCalendar,
     updateTaskInCalendar,
+    // Fonction pour vérifier les chevauchements
+    checkTaskOverlap,
   } = useCalendar();
 
   const [selectedTask, setSelectedTask] = useState(null);
@@ -96,14 +98,62 @@ const Calendar = () => {
   const handleTaskUpdate = useCallback(
     async (taskId, updates) => {
       try {
-        return await updateTask(taskId, updates);
+        // 1. Démarrer immédiatement la mise à jour optimiste (visuel)
+        const updatePromise = updateTask(taskId, updates);
+
+        // 2. En parallèle, vérifier les chevauchements pour affichage immédiat du toast
+        if (checkTaskOverlap && updates.workPeriod?.start && updates.workPeriod?.end) {
+          // Trouver la tâche dans les tâches actuelles pour obtenir les utilisateurs assignés
+          const currentTask = tasks.find(t => t.id === taskId);
+          
+          if (currentTask) {
+            // Vérifier différents formats d'utilisateurs assignés
+            let assignedUsers = null;
+            if (currentTask.assignedUsers && currentTask.assignedUsers.length > 0) {
+              assignedUsers = currentTask.assignedUsers;
+            } else if (currentTask.assignedUsersNames && currentTask.assignedUsersNames.length > 0) {
+              // Résoudre les noms en IDs
+              assignedUsers = currentTask.assignedUsersNames.map(name => {
+                const user = users.find(u => u.name === name);
+                return user ? user.id : name;
+              }).filter(Boolean);
+            }
+            
+            if (assignedUsers && assignedUsers.length > 0) {
+              // Vérification en parallèle (ne pas attendre)
+              checkTaskOverlap(
+                assignedUsers,
+                updates.workPeriod.start,
+                updates.workPeriod.end,
+                taskId
+              ).then(overlapResult => {
+                if (overlapResult.hasConflicts) {
+                  // Toast immédiat dès que la vérification est terminée
+                  toast("⚠️ Chevauchements détectés", {
+                    description: overlapResult.conflictMessage,
+                    variant: "error",
+                    position: "top-center",
+                    duration: 8000,
+                    important: true,
+                  });
+                }
+              }).catch(error => {
+                console.error("Error checking overlap during task update:", error);
+              });
+            }
+          }
+        }
+
+        // 3. Attendre et retourner le résultat de la mise à jour
+        return await updatePromise;
       } catch (error) {
         console.error("Error updating task:", error);
         throw error; // Re-throw pour que CalendarView puisse gérer l'erreur
       }
     },
-    [updateTask]
+    [updateTask, checkTaskOverlap, tasks, users]
   );
+
 
   // Gestionnaire pour le drop de tâches depuis la sidebar vers le calendrier
   const handleTaskDrop = useCallback(
@@ -127,6 +177,33 @@ const Calendar = () => {
             "🎯 Auto-assigning dropped task to filtered creatives:",
             selectedCreativeIds
           );
+
+          // Vérifier les chevauchements si des utilisateurs sont assignés
+          if (assignedUsers.length > 0) {
+            try {
+              const overlapResult = await checkTaskOverlap(
+                assignedUsers,
+                dropInfo.startDate,
+                dropInfo.endDate,
+                task.id
+              );
+
+              if (overlapResult.hasConflicts) {
+                // Afficher simplement un toast d'alerte informatif
+                toast("⚠️ Chevauchements détectés", {
+                  description: overlapResult.conflictMessage,
+                  variant: "error",
+                  position: "top-center",
+                  duration: 8000,
+                  important: true,
+                });
+                // Continuer avec l'attribution normale
+              }
+            } catch (error) {
+              console.error("Error checking overlap during drop:", error);
+              // Continuer malgré l'erreur de vérification
+            }
+          }
 
           // Afficher un toast informatif
           const creativeNames = selectedCreativeIds
@@ -223,7 +300,7 @@ const Calendar = () => {
 
   // Gestionnaire pour la sélection de zone dans le calendrier (création de nouvelle tâche)
   const handleDateSelect = useCallback(
-    (selectInfo) => {
+    async (selectInfo) => {
       console.log("📅 Creating new task from date selection:", selectInfo);
 
       // Filtrer les projets actifs selon les filtres
@@ -298,53 +375,85 @@ const Calendar = () => {
           "🎯 Auto-assigning to filtered creatives:",
           selectedCreativeIds
         );
+
+        // Vérifier les chevauchements pour l'auto-assignation
+        if (checkTaskOverlap) {
+          try {
+            const overlapResult = await checkTaskOverlap(
+              selectedCreativeIds,
+              workPeriodStart,
+              workPeriodEnd
+            );
+
+            if (overlapResult.hasConflicts) {
+              // Afficher simplement un toast d'alerte informatif
+              toast("⚠️ Chevauchements détectés", {
+                description: overlapResult.conflictMessage,
+                variant: "error",
+                position: "top-center",
+                duration: 8000,
+                important: true,
+              });
+              // Continuer avec l'ouverture du sheet
+            }
+          } catch (error) {
+            console.error("Error checking overlap during date selection:", error);
+            // Continuer malgré l'erreur de vérification
+          }
+        }
       }
 
-      // Gestion des projets filtrés
-      if (selectedProjectIds.length === 0) {
-        // Aucun projet filtré - ouvrir directement le sheet
-        setSelectedTask(baseTask);
-        setIsTaskSheetOpen(true);
-      } else if (selectedProjectIds.length === 1) {
-        console.log(selectedProjectIds);
-        // Un seul projet filtré - auto-assigner
-        const selectedProject = filteredProjects.find(
-          (p) => p.id === selectedProjectIds[0]
-        );
-
-        if (selectedProject) {
-          baseTask.projectId = selectedProject.id;
-
-          console.log(
-            "🎯 Auto-assigning to filtered project:",
-            selectedProject.name
-          );
-        }
-
-        setSelectedTask(baseTask);
-        setIsTaskSheetOpen(true);
-      } else {
-        // Plusieurs projets filtrés - ouvrir la modal de sélection
-        const projectsToSelect = filteredProjects.filter((p) =>
-          selectedProjectIds.includes(p.id)
-        );
-
-        if (projectsToSelect.length > 1) {
-          console.log("📋 Multiple projects filtered, opening selection modal");
-          setPendingTaskData(baseTask);
-          setFilteredProjectsForModal(projectsToSelect);
-          setIsProjectModalOpen(true);
-        } else {
-          // Fallback si un seul projet reste après filtrage
-          if (projectsToSelect.length === 1) {
-            baseTask.projectId = projectsToSelect[0].id;
-          }
+      // Fonction pour continuer avec la création de tâche
+      const proceedWithTaskCreation = () => {
+        // Gestion des projets filtrés
+        if (selectedProjectIds.length === 0) {
+          // Aucun projet filtré - ouvrir directement le sheet
           setSelectedTask(baseTask);
           setIsTaskSheetOpen(true);
+        } else if (selectedProjectIds.length === 1) {
+          console.log(selectedProjectIds);
+          // Un seul projet filtré - auto-assigner
+          const selectedProject = filteredProjects.find(
+            (p) => p.id === selectedProjectIds[0]
+          );
+
+          if (selectedProject) {
+            baseTask.projectId = selectedProject.id;
+
+            console.log(
+              "🎯 Auto-assigning to filtered project:",
+              selectedProject.name
+            );
+          }
+
+          setSelectedTask(baseTask);
+          setIsTaskSheetOpen(true);
+        } else {
+          // Plusieurs projets filtrés - ouvrir la modal de sélection
+          const projectsToSelect = filteredProjects.filter((p) =>
+            selectedProjectIds.includes(p.id)
+          );
+
+          if (projectsToSelect.length > 1) {
+            console.log("📋 Multiple projects filtered, opening selection modal");
+            setPendingTaskData(baseTask);
+            setFilteredProjectsForModal(projectsToSelect);
+            setIsProjectModalOpen(true);
+          } else {
+            // Fallback si un seul projet reste après filtrage
+            if (projectsToSelect.length === 1) {
+              baseTask.projectId = projectsToSelect[0].id;
+            }
+            setSelectedTask(baseTask);
+            setIsTaskSheetOpen(true);
+          }
         }
-      }
+      };
+
+      // Appeler la fonction pour continuer avec la création
+      proceedWithTaskCreation();
     },
-    [filters, projects]
+    [filters, projects, checkTaskOverlap]
   );
 
   // Gestionnaire pour la création de nouvelles tâches
@@ -567,6 +676,7 @@ const Calendar = () => {
         onSave={handleTaskSaveOrCreate}
         onClose={handleTaskSheetClose}
         onDelete={handleTaskDelete}
+        checkTaskOverlap={checkTaskOverlap}
       />
 
       {/* Modal de configuration */}

@@ -53,6 +53,7 @@ const TaskEditSheet = ({
   onSave,
   onClose,
   onDelete,
+  checkTaskOverlap,
 }) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -288,6 +289,33 @@ const TaskEditSheet = ({
       formData.endTime
     );
 
+    // Vérifier les chevauchements si des utilisateurs sont assignés et que nous avons les dates
+    if (checkTaskOverlap && formData.assignedUsers?.length > 0 && startDateTime && endDateTime) {
+      try {
+        const overlapResult = await checkTaskOverlap(
+          formData.assignedUsers,
+          startDateTime,
+          endDateTime,
+          task.id !== "new" ? task.id : undefined
+        );
+
+        if (overlapResult.hasConflicts) {
+          // Afficher simplement un toast d'alerte informatif
+          toast("⚠️ Chevauchements détectés", {
+            description: overlapResult.conflictMessage,
+            variant: "error",
+            position: "top-center",
+            duration: 8000,
+            important: true,
+          });
+          // Continuer avec la sauvegarde normale
+        }
+      } catch (error) {
+        console.error("Error checking overlap:", error);
+        // En cas d'erreur de vérification, continuer la sauvegarde
+      }
+    }
+
     const updates = {
       name: formData.name,
       projectId: formData.projectId,
@@ -355,6 +383,7 @@ const TaskEditSheet = ({
 
     return colorMap[status.color] || colorMap.default;
   };
+
 
   // Gestionnaire pour la suppression avec UX améliorée (garde la sheet ouverte)
   const handleDelete = async () => {

@@ -1069,6 +1069,36 @@ export const useCalendar = () => {
     console.log("✅ Task updated in calendar state:", taskId, updates);
   }, []);
 
+  // Vérifier les chevauchements de tâches
+  const checkTaskOverlap = useCallback(async (assignedUsers, startDate, endDate, excludeTaskId) => {
+    try {
+      console.log("🔍 Checking task overlap:", {
+        assignedUsers,
+        startDate,
+        endDate,
+        excludeTaskId,
+      });
+
+      const response = await calendarService.checkTaskOverlap({
+        assignedUsers,
+        startDate,
+        endDate,
+        excludeTaskId,
+      });
+
+      console.log("🔍 Overlap check result:", response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error checking task overlap:", error);
+      toast("🚨 Erreur", {
+        description: "Impossible de vérifier les chevauchements",
+        variant: "error",
+      });
+      return { hasConflicts: false, conflictMessage: "", conflicts: [] };
+    }
+  }, []);
+
   return {
     // État
     tasks: filteredTasks,
@@ -1105,6 +1135,9 @@ export const useCalendar = () => {
     addTaskToCalendar,
     removeTaskFromCalendar,
     updateTaskInCalendar,
+
+    // Vérification des chevauchements
+    checkTaskOverlap,
 
     // Utilitaires
     clearCache: cacheManager.clear,

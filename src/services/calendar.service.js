@@ -206,6 +206,17 @@ class CalendarService {
     }
   }
 
+  // Vérifier les chevauchements de tâches
+  async checkTaskOverlap(data) {
+    try {
+      const response = await this.api.post("/check-overlap", data);
+      return response.data;
+    } catch (error) {
+      console.error("Error checking task overlap:", error);
+      throw this.handleError(error);
+    }
+  }
+
   // Gestion des erreurs
   handleError(error) {
     if (error.response) {
