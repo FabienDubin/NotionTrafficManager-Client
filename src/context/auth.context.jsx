@@ -22,6 +22,7 @@ function AuthProviderWrapper({ children }) {
   //Verify the token and update the user state if the token is valid
   const authenticateUser = () => {
     setIsLoading(true);
+    
     // Get the stored token from the localStorage
     const storedToken = localStorage.getItem("authToken");
 
@@ -32,34 +33,42 @@ function AuthProviderWrapper({ children }) {
       return;
     }
 
-    // If the token exists in the localStorage
-    if (storedToken) {
-      // call the authService to verify the token and update the user state if the token is valid
-      authService
-        .verify()
-        .then((response) => {
-          // If the server verifies that JWT token is valid  ✅
-          const user = response.data;
-          // console.log(user);
-
-          // Update state variables
-          setIsLoggedIn(true);
-          setIsLoading(false);
-          setUser(user);
-        })
-        .catch((error) => {
-          // If the server sends an error response (invalid token) ❌
-          // Update state variables
-          setIsLoggedIn(false);
-          setIsLoading(false);
-          setUser(null);
-        });
-    } else {
-      // If the token is not available
+    // Timeout pour éviter que isLoading reste bloqué à true
+    const timeoutId = setTimeout(() => {
+      console.warn("Authentication timeout - resetting auth state");
       setIsLoggedIn(false);
       setIsLoading(false);
       setUser(null);
-    }
+    }, 10000); // 10 secondes timeout
+
+    // call the authService to verify the token and update the user state if the token is valid
+    authService
+      .verify()
+      .then((response) => {
+        clearTimeout(timeoutId);
+        // If the server verifies that JWT token is valid  ✅
+        const user = response.data;
+        // console.log(user);
+
+        // Update state variables
+        setIsLoggedIn(true);
+        setIsLoading(false);
+        setUser(user);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        console.error("Authentication error:", error);
+        
+        // Si le token est invalide ou expiré, on le supprime
+        if (error.response?.status === 401) {
+          localStorage.removeItem("authToken");
+        }
+        
+        // Update state variables
+        setIsLoggedIn(false);
+        setIsLoading(false);
+        setUser(null);
+      });
   };
 
   const removeToken = () => {
