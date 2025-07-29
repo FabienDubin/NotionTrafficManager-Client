@@ -662,6 +662,7 @@ const Calendar = () => {
           onDateSelect={handleDateSelect}
           onTaskDrop={handleTaskDrop}
           defaultView={preferences?.defaultView || "timeGridWeek"}
+          preferences={preferences} // Passer les préférences utilisateur
         />
       </div>
 

@@ -14,8 +14,38 @@ const CalendarView = ({
   onDateSelect,
   onTaskDrop,
   defaultView = "timeGridWeek",
+  preferences, // Ajout des préférences utilisateur
 }) => {
   const calendarRef = useRef(null);
+
+  // Fonction utilitaire pour formater le titre selon les préférences
+  const formatTaskTitle = (task) => {
+    const visibleProperties = preferences?.visibleProperties || ["name"];
+    const titleParts = [];
+
+    // Toujours inclure le nom de la tâche
+    if (task.name) {
+      titleParts.push(task.name);
+    }
+
+    // Ajouter le client si visible dans les préférences
+    if (visibleProperties.includes("client") && task.client) {
+      const clientName = Array.isArray(task.client) ? task.client[0] : task.client;
+      if (clientName) {
+        titleParts.push(`[${clientName}]`);
+      }
+    }
+
+    // Ajouter le projet si visible dans les préférences
+    if (visibleProperties.includes("project") && task.projectName) {
+      const projectName = Array.isArray(task.projectName) ? task.projectName[0] : task.projectName;
+      if (projectName) {
+        titleParts.push(`(${projectName})`);
+      }
+    }
+
+    return titleParts.join(" ");
+  };
 
   // Fonction pour mettre à jour un événement spécifique ou gérer les opérations spéciales
   const updateEvent = (taskIdOrEvent, updates) => {
@@ -132,8 +162,18 @@ const CalendarView = ({
           const taskData = JSON.parse(eventEl.dataset.task || "{}");
           console.log("🎯 Draggable eventData:", taskData);
 
+          // Debug du drag & drop
+          console.log(`🎨 [DEBUG Drag] Task drag data:`, {
+            name: taskData.name,
+            clientColor: taskData.clientColor,
+            client: taskData.client,
+          });
+
+          const formattedTitle = formatTaskTitle(taskData);
+          console.log(`🎨 [DEBUG Drag] Formatted title: "${formattedTitle}"`);
+
           return {
-            title: taskData.name || "Tâche sans nom",
+            title: formattedTitle, // Utiliser le formatage cohérent
             duration: "02:00:00", // 2 heures par défaut
             backgroundColor: taskData.clientColor || "#6366f1",
             borderColor: taskData.clientColor || "#6366f1",
@@ -230,7 +270,7 @@ const CalendarView = ({
     // Événements
     events: tasks.map((task) => ({
       id: task.id,
-      title: task.title || task.name,
+      title: formatTaskTitle(task), // Utiliser le formatage dynamique
       start: task.start || task.workPeriod?.start,
       end: task.end || task.workPeriod?.end,
       backgroundColor: task.clientColor || "#6366f1",
@@ -266,17 +306,30 @@ const CalendarView = ({
       if (originalTask) {
         const element = info.el;
 
+        // Debug des couleurs reçues
+        console.log(`🎨 [DEBUG Frontend] Event colors for "${originalTask.name}":`, {
+          eventBackgroundColor: event.backgroundColor,
+          taskClientColor: originalTask.clientColor,
+          clientName: originalTask.client,
+        });
+
         // Forcer l'application des couleurs avec des variables CSS
         const backgroundColor =
           event.backgroundColor || originalTask.clientColor || "#6366f1";
         const borderColor =
           event.borderColor || originalTask.clientColor || "#6366f1";
 
+        console.log(`🎨 [DEBUG Frontend] Applied colors: bg=${backgroundColor}, border=${borderColor}`);
+
         element.style.setProperty("--event-bg-color", backgroundColor);
         element.style.setProperty("--event-border-color", borderColor);
         element.style.backgroundColor = backgroundColor;
         element.style.borderColor = borderColor;
         element.style.color = "#ffffff";
+        
+        // Force l'affichage même si FullCalendar résiste
+        element.style.setProperty("background-color", backgroundColor, "important");
+        element.style.setProperty("border-color", borderColor, "important");
 
         // Ajouter une classe CSS personnalisée selon le statut
         if (originalTask.status) {
