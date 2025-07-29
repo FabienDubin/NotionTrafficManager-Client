@@ -33,6 +33,26 @@ function AuthProviderWrapper({ children }) {
       return;
     }
 
+    // Vérification basique du format du token JWT
+    try {
+      const tokenParts = storedToken.split('.');
+      if (tokenParts.length !== 3) {
+        console.error("Invalid token format - removing from storage");
+        localStorage.removeItem("authToken");
+        setIsLoggedIn(false);
+        setIsLoading(false);
+        setUser(null);
+        return;
+      }
+    } catch (error) {
+      console.error("Error parsing token:", error);
+      localStorage.removeItem("authToken");
+      setIsLoggedIn(false);
+      setIsLoading(false);
+      setUser(null);
+      return;
+    }
+
     // Timeout pour éviter que isLoading reste bloqué à true
     const timeoutId = setTimeout(() => {
       console.warn("Authentication timeout - resetting auth state");
@@ -59,9 +79,29 @@ function AuthProviderWrapper({ children }) {
         clearTimeout(timeoutId);
         console.error("Authentication error:", error);
         
-        // Si le token est invalide ou expiré, on le supprime
-        if (error.response?.status === 401) {
-          localStorage.removeItem("authToken");
+        // Gestion améliorée des différents types d'erreurs
+        if (error.response) {
+          const status = error.response.status;
+          console.log(`Server responded with status: ${status}`);
+          
+          // Token invalide, expiré, ou utilisateur non trouvé
+          if (status === 401) {
+            console.log("Token invalid or expired - removing from storage");
+            localStorage.removeItem("authToken");
+          }
+          // Erreur de base de données ou serveur indisponible
+          else if (status === 503) {
+            console.error("Database connection error on server");
+          }
+          // Autres erreurs serveur
+          else if (status >= 500) {
+            console.error("Server internal error - keeping token for retry");
+          }
+        } else if (error.request) {
+          // Erreur réseau/connexion
+          console.error("Network error - server unreachable");
+        } else {
+          console.error("Request setup error:", error.message);
         }
         
         // Update state variables
