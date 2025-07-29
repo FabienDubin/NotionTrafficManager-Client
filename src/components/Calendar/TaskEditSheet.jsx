@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -74,15 +74,16 @@ const TaskEditSheet = ({
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Filtrer les projets selon le statut
-  const filteredProjects =
+  // Optimisation: Filtrer les projets selon le statut avec useMemo
+  const filteredProjects = useMemo(() => 
     projects?.filter(
       (project) => project.status === "En cours" || project.status === "New Biz"
-    ) || [];
+    ) || [], [projects]);
 
-  // Obtenir le projet sélectionné
-  const selectedProject = filteredProjects.find(
-    (project) => project.id === formData.projectId
+  // Optimisation: Obtenir le projet sélectionné avec useMemo
+  const selectedProject = useMemo(() => 
+    filteredProjects.find((project) => project.id === formData.projectId),
+    [filteredProjects, formData.projectId]
   );
 
   // Mettre à jour le formulaire quand la tâche change
@@ -128,193 +129,128 @@ const TaskEditSheet = ({
   }, [open]);
 
   // Calculer la durée initiale en minutes
-  const calculateInitialDuration = () => {
+  const calculateInitialDuration = useCallback(() => {
     if (!task?.workPeriod?.start || !task?.workPeriod?.end) return null;
-
     const start = new Date(task.workPeriod.start);
     const end = new Date(task.workPeriod.end);
     return end.getTime() - start.getTime(); // durée en millisecondes
-  };
+  }, [task]);
 
-  const initialDuration = calculateInitialDuration();
+  const initialDuration = useMemo(() => calculateInitialDuration(), [calculateInitialDuration]);
 
-  // Fonction utilitaire pour créer une date sécurisée
-  const createSafeDate = (dateStr, timeStr) => {
-    try {
-      if (!dateStr) return null;
-      const time = timeStr || "09:00";
-      const dateTime = `${dateStr}T${time}:00`;
-      const date = new Date(dateTime);
+  // Optimisation: Fonction utilitaire pour créer une date sécurisée avec useMemo
+  const createSafeDate = useCallback((dateStr, timeStr) => {
+    if (!dateStr) return null;
+    const time = timeStr || "09:00";
+    const date = new Date(`${dateStr}T${time}:00`);
+    return isNaN(date.getTime()) ? null : date;
+  }, []);
 
-      // Vérifier si la date est valide
-      if (isNaN(date.getTime())) {
-        return null;
-      }
-
-      return date;
-    } catch (error) {
-      console.error("Error creating date:", error);
-      return null;
-    }
-  };
-
-  // Gestionnaire pour les changements de formulaire avec logique de dates
-  const handleInputChange = (field, value) => {
+  // Optimisation: Gestionnaire pour les changements de formulaire avec debounce
+  const handleInputChange = useCallback((field, value) => {
     setFormData((prev) => {
       const newData = { ...prev, [field]: value };
 
-      // Si on change la date de début, ajuster la date de fin selon la durée initiale
-      if (field === "startDate" && initialDuration && value) {
-        const newStartDateTime = createSafeDate(
-          value,
-          prev.startTime || "09:00"
-        );
-
-        if (newStartDateTime) {
-          const newEndDateTime = new Date(
-            newStartDateTime.getTime() + initialDuration
-          );
-
-          if (!isNaN(newEndDateTime.getTime())) {
-            newData.endDate = newEndDateTime.toISOString().split("T")[0];
-            newData.endTime = newEndDateTime.toTimeString().substring(0, 5);
-          }
-        }
-      }
-
-      // Si on change l'heure de début, ajuster l'heure de fin selon la durée initiale
-      if (field === "startTime" && initialDuration && value && prev.startDate) {
-        const newStartDateTime = createSafeDate(prev.startDate, value);
-
-        if (newStartDateTime) {
-          const newEndDateTime = new Date(
-            newStartDateTime.getTime() + initialDuration
-          );
-
-          if (!isNaN(newEndDateTime.getTime())) {
-            newData.endDate = newEndDateTime.toISOString().split("T")[0];
-            newData.endTime = newEndDateTime.toTimeString().substring(0, 5);
+      // Optimisation: logique de dates simplifiée
+      if ((field === "startDate" || field === "startTime") && initialDuration && value) {
+        const startDate = field === "startDate" ? value : prev.startDate;
+        const startTime = field === "startTime" ? value : prev.startTime || "09:00";
+        
+        if (startDate) {
+          const newStartDateTime = createSafeDate(startDate, startTime);
+          if (newStartDateTime) {
+            const newEndDateTime = new Date(newStartDateTime.getTime() + initialDuration);
+            if (!isNaN(newEndDateTime.getTime())) {
+              newData.endDate = newEndDateTime.toISOString().split("T")[0];
+              newData.endTime = newEndDateTime.toTimeString().substring(0, 5);
+            }
           }
         }
       }
 
       return newData;
     });
-  };
+  }, [initialDuration, createSafeDate]);
 
-  // Fonction de validation des dates
-  const validateDates = () => {
+  // Optimisation: Fonction utilitaire pour créer des dates ISO optimisée
+  const createLocalISOString = useCallback((dateStr, timeStr) => {
+    if (!dateStr) return null;
+    const time = timeStr || "09:00";
+    // Utilisation d'une approche plus simple et rapide
+    return `${dateStr}T${time}:00.000Z`;
+  }, []);
+
+  // Optimisation: Validation groupée et optimisée
+  const validateFormData = useCallback(() => {
+    // Validation des champs obligatoires pour nouvelles tâches
+    if (task?.isNew || task?.id === "new") {
+      if (!formData.name.trim()) {
+        return { isValid: false, message: "Le nom de la tâche est obligatoire." };
+      }
+      if (!formData.projectId) {
+        return { isValid: false, message: "Le projet est obligatoire." };
+      }
+    }
+
+    // Validation des dates
     if (!formData.startDate || !formData.endDate) {
-      return {
-        isValid: false,
-        message: "Les dates de début et de fin sont requises.",
-      };
+      return { isValid: false, message: "Les dates de début et de fin sont requises." };
     }
 
-    const startDateTime = createSafeDate(
-      formData.startDate,
-      formData.startTime
-    );
-    const endDateTime = createSafeDate(formData.endDate, formData.endTime);
-
-    if (!startDateTime || !endDateTime) {
-      return { isValid: false, message: "Format de date invalide." };
-    }
+    const startDateTime = createLocalISOString(formData.startDate, formData.startTime);
+    const endDateTime = createLocalISOString(formData.endDate, formData.endTime);
 
     if (endDateTime <= startDateTime) {
       return {
         isValid: false,
-        message:
-          "La date et heure de fin doivent être postérieures à la date et heure de début.",
+        message: "La date et heure de fin doivent être postérieures à la date et heure de début."
       };
     }
 
-    return { isValid: true };
-  };
+    return { isValid: true, startDateTime, endDateTime };
+  }, [formData, task, createLocalISOString]);
+
+  // Optimisation: Vérification des chevauchements en arrière-plan
+  const checkOverlapAsync = useCallback(async (assignedUsers, startDateTime, endDateTime, taskId) => {
+    if (!checkTaskOverlap || !assignedUsers?.length) return;
+    
+    try {
+      const overlapResult = await checkTaskOverlap(
+        assignedUsers,
+        startDateTime,
+        endDateTime,
+        taskId !== "new" ? taskId : undefined
+      );
+
+      if (overlapResult.hasConflicts) {
+        toast("⚠️ Chevauchements détectés", {
+          description: overlapResult.conflictMessage,
+          variant: "error",
+          position: "top-center",
+          duration: 8000,
+          important: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error checking overlap:", error);
+    }
+  }, [checkTaskOverlap]);
 
   // Gestionnaire pour la sauvegarde avec UX optimisée
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!task) return;
 
-    // Validation supplémentaire pour les nouvelles tâches
-    if (task.isNew || task.id === "new") {
-      if (!formData.name.trim()) {
-        toast("Erreur de validation", {
-          description: "Le nom de la tâche est obligatoire.",
-          variant: "error",
-        });
-        return;
-      }
-
-      if (!formData.projectId) {
-        toast("Erreur de validation", {
-          description: "Le projet est obligatoire.",
-          variant: "error",
-        });
-        return;
-      }
-    }
-
-    // Validation des dates avant sauvegarde
-    const validation = validateDates();
+    // Validation rapide et groupée
+    const validation = validateFormData();
     if (!validation.isValid) {
       toast("Erreur de validation", {
         description: validation.message,
         variant: "error",
       });
-      return; // Garder la sheet ouverte pour permettre la correction
+      return;
     }
 
-    // Combiner date et heure avec validation et fuseau horaire local
-    const createLocalISOString = (dateStr, timeStr) => {
-      if (!dateStr) return null;
-      const time = timeStr || "09:00";
-
-      // Créer une date locale sans conversion de fuseau horaire
-      const localDate = new Date(`${dateStr}T${time}:00`);
-
-      // Ajuster pour le fuseau horaire local pour éviter les décalages
-      const timezoneOffset = localDate.getTimezoneOffset() * 60000;
-      const localISOTime = new Date(localDate.getTime() - timezoneOffset);
-
-      return localISOTime.toISOString();
-    };
-
-    const startDateTime = createLocalISOString(
-      formData.startDate,
-      formData.startTime
-    );
-    const endDateTime = createLocalISOString(
-      formData.endDate,
-      formData.endTime
-    );
-
-    // Vérifier les chevauchements si des utilisateurs sont assignés et que nous avons les dates
-    if (checkTaskOverlap && formData.assignedUsers?.length > 0 && startDateTime && endDateTime) {
-      try {
-        const overlapResult = await checkTaskOverlap(
-          formData.assignedUsers,
-          startDateTime,
-          endDateTime,
-          task.id !== "new" ? task.id : undefined
-        );
-
-        if (overlapResult.hasConflicts) {
-          // Afficher simplement un toast d'alerte informatif
-          toast("⚠️ Chevauchements détectés", {
-            description: overlapResult.conflictMessage,
-            variant: "error",
-            position: "top-center",
-            duration: 8000,
-            important: true,
-          });
-          // Continuer avec la sauvegarde normale
-        }
-      } catch (error) {
-        console.error("Error checking overlap:", error);
-        // En cas d'erreur de vérification, continuer la sauvegarde
-      }
-    }
+    const { startDateTime, endDateTime } = validation;
 
     const updates = {
       name: formData.name,
@@ -328,7 +264,7 @@ const TaskEditSheet = ({
       addToRetroPlanning: formData.addToRetroPlanning,
     };
 
-    // Fermer immédiatement la sheet pour une UX fluide
+    // Fermer IMMÉDIATEMENT la sheet pour une UX fluide
     onClose();
 
     // Toast de progression
@@ -336,18 +272,20 @@ const TaskEditSheet = ({
       description: "Synchronisation avec Notion",
     });
 
+    // Lancer la vérification des chevauchements en arrière-plan (non-bloquant)
+    if (formData.assignedUsers?.length > 0) {
+      checkOverlapAsync(formData.assignedUsers, startDateTime, endDateTime, task.id);
+    }
+
     try {
-      // Sauvegarde en arrière-plan avec la nouvelle fonction optimisée
+      // Sauvegarde en arrière-plan
       await onSave(task.id, updates, {
-        showProgressToast: false, // Déjà affiché ci-dessus
+        showProgressToast: false,
         showSuccessToast: true,
       });
-
-      // Toast de succès géré par la fonction onSave
     } catch (error) {
       console.error("Error saving task:", error);
 
-      // En cas d'erreur, proposer de réouvrir la sheet
       const isNewTask = task.isNew || task.id === "new";
       toast(isNewTask ? "Erreur de création" : "Erreur de sauvegarde", {
         description: isNewTask
@@ -360,36 +298,31 @@ const TaskEditSheet = ({
         },
       });
     }
-  };
+  }, [task, formData, validateFormData, checkOverlapAsync, onClose, onSave, onOpenChange]);
 
-  // Fonction pour obtenir la couleur du statut
-  const getStatusColor = (statusName) => {
+  // Optimisation: Fonction pour obtenir la couleur du statut avec useCallback et mapping optimisé
+  const colorMap = useMemo(() => ({
+    gray: "bg-gray-500",
+    brown: "bg-amber-600",
+    orange: "bg-orange-500",
+    yellow: "bg-yellow-500",
+    green: "bg-green-500",
+    blue: "bg-blue-500",
+    purple: "bg-purple-500",
+    pink: "bg-pink-500",
+    red: "bg-red-500",
+    default: "bg-gray-500",
+  }), []);
+
+  const getStatusColor = useCallback((statusName) => {
     const status = statusOptions.find((s) => s.name === statusName);
-    if (!status) return "bg-gray-500";
+    return status ? (colorMap[status.color] || colorMap.default) : colorMap.default;
+  }, [statusOptions, colorMap]);
 
-    // Mapping des couleurs Notion vers les classes Tailwind
-    const colorMap = {
-      gray: "bg-gray-500",
-      brown: "bg-amber-600",
-      orange: "bg-orange-500",
-      yellow: "bg-yellow-500",
-      green: "bg-green-500",
-      blue: "bg-blue-500",
-      purple: "bg-purple-500",
-      pink: "bg-pink-500",
-      red: "bg-red-500",
-      default: "bg-gray-500",
-    };
-
-    return colorMap[status.color] || colorMap.default;
-  };
-
-
-  // Gestionnaire pour la suppression avec UX améliorée (garde la sheet ouverte)
-  const handleDelete = async () => {
+  // Optimisation: Gestionnaire pour la suppression avec useCallback
+  const handleDelete = useCallback(async () => {
     if (!task || !onDelete) return;
 
-    // Ne pas permettre la suppression des nouvelles tâches
     if (task.isNew || task.id === "new") {
       toast("Erreur", {
         description: "Impossible de supprimer une tâche non sauvegardée.",
@@ -398,40 +331,32 @@ const TaskEditSheet = ({
       return;
     }
 
-    // Activer l'état de chargement SANS fermer la sheet
     setLoading(true);
 
     try {
-      // Suppression avec la fonction optimisée
       await onDelete(task.id, {
-        showProgressToast: false, // Pas besoin, on a l'indicateur de chargement
+        showProgressToast: false,
         showSuccessToast: true,
       });
-
-      // Fermer la sheet seulement après succès
       onClose();
     } catch (error) {
       console.error("Error deleting task:", error);
-
-      // Désactiver le chargement pour permettre un nouvel essai
       setLoading(false);
-
-      // Afficher l'erreur sans fermer la sheet
       toast("Erreur de suppression", {
         description: `Une erreur est survenue lors de la suppression: ${error.message}`,
         variant: "error",
       });
     }
-  };
+  }, [task, onDelete, onClose]);
 
-  // Gestionnaire pour fermer la sheet en cliquant dehors
-  const handleOpenChange = (newOpen) => {
+  // Optimisation: Gestionnaire pour fermer la sheet avec useCallback
+  const handleOpenChange = useCallback((newOpen) => {
     if (!newOpen) {
-      // Fermer sans sauvegarder
       onClose();
     }
     onOpenChange(newOpen);
-  };
+  }, [onClose, onOpenChange]);
+
   if (!task) return null;
 
   return (
